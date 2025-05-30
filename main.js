@@ -3,7 +3,6 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const obsidian_1 = require("obsidian");
 const DEFAULT_SETTINGS = {
     dateFormat: "YYYY-MM-DD",
-    dailyFolder: "",
     autoCreate: false,
     acceptKey: "Tab",
     noAliasWithShift: false,
@@ -270,7 +269,8 @@ class DDSuggest extends obsidian_1.EditorSuggest {
         /* ----------------------------------------------------------------
            2. Build the wikilink with alias
         ----------------------------------------------------------------- */
-        const linkPath = (settings.dailyFolder ? settings.dailyFolder + "/" : "") + value;
+        const folder = this.plugin.getDailyFolder();
+        const linkPath = (folder ? folder + "/" : "") + value;
         const link = `[[${linkPath}|${alias}]]`;
         /* ----------------------------------------------------------------
            3. Insert, respecting the Shift-modifier behaviour
@@ -291,7 +291,7 @@ class DDSuggest extends obsidian_1.EditorSuggest {
         if (settings.autoCreate &&
             !this.app.vault.getAbstractFileByPath(linkPath + ".md")) {
             const target = linkPath + ".md";
-            const folder = settings.dailyFolder.trim();
+            const folder = this.plugin.getDailyFolder().trim();
             (async () => {
                 if (folder &&
                     !this.app.vault.getAbstractFileByPath(folder)) {
@@ -323,6 +323,10 @@ class DDSuggest extends obsidian_1.EditorSuggest {
  */
 class DynamicDates extends obsidian_1.Plugin {
     settings = DEFAULT_SETTINGS;
+    getDailyFolder() {
+        const daily = this.app.internalPlugins?.plugins?.["daily-notes"]?.instance?.options;
+        return daily?.folder || "";
+    }
     allPhrases() {
         return [...PHRASES, ...Object.keys(this.settings.customDates || {}).map(p => p.toLowerCase())];
     }
@@ -346,12 +350,8 @@ class DynamicDates extends obsidian_1.Plugin {
     async loadSettings() {
         this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
         const daily = this.app.internalPlugins?.plugins?.["daily-notes"]?.instance?.options;
-        if (daily) {
-            if (!this.settings.dateFormat)
-                this.settings.dateFormat = daily.format;
-            if (!this.settings.dailyFolder)
-                this.settings.dailyFolder = daily.folder;
-        }
+        if (daily && !this.settings.dateFormat)
+            this.settings.dateFormat = daily.format;
         if (!this.settings.customDates)
             this.settings.customDates = {};
         phraseToMoment.customDates = Object.fromEntries(Object.entries(this.settings.customDates).map(([k, v]) => [k.toLowerCase(), v]));
@@ -376,7 +376,8 @@ class DynamicDates extends obsidian_1.Plugin {
         else {
             alias = phrase.replace(/\b\w/g, ch => ch.toUpperCase());
         }
-        const linkPath = (this.settings.dailyFolder ? this.settings.dailyFolder + "/" : "") + value;
+        const folder = this.getDailyFolder();
+        const linkPath = (folder ? folder + "/" : "") + value;
         return `[[${linkPath}|${alias}]]`;
     }
     convertText(text) {
@@ -413,15 +414,6 @@ class DDSettingTab extends obsidian_1.PluginSettingTab {
             .setValue(this.plugin.settings.dateFormat)
             .onChange(async (v) => {
             this.plugin.settings.dateFormat = v;
-            await this.plugin.saveSettings();
-        }));
-        new obsidian_1.Setting(containerEl)
-            .setName("Daily-note folder")
-            .addText((t) => t
-            .setPlaceholder("Daily")
-            .setValue(this.plugin.settings.dailyFolder)
-            .onChange(async (v) => {
-            this.plugin.settings.dailyFolder = v.trim();
             await this.plugin.saveSettings();
         }));
         new obsidian_1.Setting(containerEl)

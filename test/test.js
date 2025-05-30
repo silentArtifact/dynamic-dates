@@ -115,7 +115,7 @@
   /* ------------------------------------------------------------------ */
   /* onTrigger guard rails                                             */
   /* ------------------------------------------------------------------ */
-  const plugin = { settings: { dateFormat: 'YYYY-MM-DD', dailyFolder: '', autoCreate: false, acceptKey:'Tab', noAliasWithShift: true, aliasFormat:'capitalize', openOnCreate:false }, allPhrases: () => PHRASES };
+  const plugin = { settings: { dateFormat: 'YYYY-MM-DD', autoCreate: false, acceptKey:'Tab', noAliasWithShift: true, aliasFormat:'capitalize', openOnCreate:false }, dailyFolder:'', allPhrases: () => PHRASES, getDailyFolder(){ return this.dailyFolder; } };
   const app = { vault: {} };
   const sugg = new DDSuggest(app, plugin);
 
@@ -151,7 +151,7 @@
   /* auto-create daily note                                            */
   /* ------------------------------------------------------------------ */
   plugin.settings.autoCreate = true;
-  plugin.settings.dailyFolder = 'Daily';
+  plugin.dailyFolder = 'Daily';
   plugin.settings.openOnCreate = true;
   const calls = [];
   app.vault = {
@@ -187,7 +187,7 @@
   /* convertText utility                                               */
   /* ------------------------------------------------------------------ */
   const inst = new DynamicDates();
-  inst.settings = Object.assign({}, plugin.settings, { aliasFormat: 'date', dailyFolder: '' });
+  inst.settings = Object.assign({}, plugin.settings, { aliasFormat: 'date' });
   const converted = inst.convertText('see you tomorrow');
   assert.strictEqual(converted, 'see you [[2024-05-09|May 9th]]');
 
@@ -195,7 +195,8 @@
   /* linkForPhrase variations                                           */
   /* ------------------------------------------------------------------ */
   const lf = new DynamicDates();
-  lf.settings = Object.assign({}, plugin.settings, { dailyFolder: 'Journal' });
+  lf.settings = Object.assign({}, plugin.settings);
+  lf.getDailyFolder = () => 'Journal';
   assert.strictEqual(lf.linkForPhrase('tomorrow'), '[[Journal/2024-05-09|Tomorrow]]');
   lf.settings.aliasFormat = 'keep';
   assert.strictEqual(lf.linkForPhrase('tomorrow'), '[[Journal/2024-05-09|tomorrow]]');
@@ -206,7 +207,7 @@
   /* ------------------------------------------------------------------ */
   /* convertText edge cases                                             */
   /* ------------------------------------------------------------------ */
-  lf.settings.dailyFolder = '';
+  lf.getDailyFolder = () => '';
   const multi = lf.convertText('today and Tomorrow and next Monday');
   assert.strictEqual(multi,
     '[[2024-05-08|May 8th]] and [[2024-05-09|May 9th]] and [[2024-05-13|May 13th]]');
@@ -218,7 +219,7 @@
   /* ------------------------------------------------------------------ */
   /* onTrigger additional guard rails                                   */
   /* ------------------------------------------------------------------ */
-  const tPlugin = { settings: Object.assign({}, plugin.settings, { autoCreate: false }), allPhrases: () => PHRASES };
+  const tPlugin = { settings: Object.assign({}, plugin.settings, { autoCreate: false }), dailyFolder:'Daily', allPhrases: () => PHRASES, getDailyFolder(){ return this.dailyFolder; } };
   const tApp = { vault:{}, workspace:{} };
   const tSugg = new DDSuggest(tApp, tPlugin);
   assert.strictEqual(tSugg.onTrigger({line:0,ch:4}, { getLine:()=> 'next' }, null), null);
@@ -246,7 +247,7 @@
   assert.strictEqual(fmt(phraseToMoment('fall start')), '2025-08-22');
   moment.now = new Date('2024-05-08');
   const cPlugin = new DynamicDates();
-  cPlugin.settings = Object.assign({}, plugin.settings, { customDates: { 'fall start':'08-22' }, dailyFolder: '' });
+  cPlugin.settings = Object.assign({}, plugin.settings, { customDates: { 'fall start':'08-22' } });
   phraseToMoment.customDates = { 'fall start':'08-22' };
   const cSugg = new DDSuggest({ vault:{}, workspace:{} }, cPlugin);
   const list = cSugg.getSuggestions({ query:'fall st' });
