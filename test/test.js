@@ -147,6 +147,16 @@
 
   plugin.settings.aliasFormat = 'capitalize';
 
+  // ensure qualifiers remain lowercase
+  sugg.context = { editor, start:{line:0,ch:0}, end:{line:0,ch:8}, query:'last thu' };
+  sugg.selectSuggestion('2024-05-02', new KeyboardEvent({ shiftKey:false, key:'Tab' }));
+  assert.strictEqual(inserted.pop(), '[[2024-05-02|last Thursday]]');
+
+  // preserve user capitalization of qualifiers
+  sugg.context = { editor, start:{line:0,ch:0}, end:{line:0,ch:8}, query:'Last thu' };
+  sugg.selectSuggestion('2024-05-02', new KeyboardEvent({ shiftKey:false, key:'Tab' }));
+  assert.strictEqual(inserted.pop(), '[[2024-05-02|Last Thursday]]');
+
   /* ------------------------------------------------------------------ */
   /* auto-create daily note                                            */
   /* ------------------------------------------------------------------ */
@@ -190,6 +200,7 @@
   inst.settings = Object.assign({}, plugin.settings, { aliasFormat: 'date' });
   const converted = inst.convertText('see you tomorrow');
   assert.strictEqual(converted, 'see you [[2024-05-09|May 9th]]');
+
 
   /* ------------------------------------------------------------------ */
   /* linkForPhrase variations                                           */

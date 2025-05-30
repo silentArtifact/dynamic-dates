@@ -311,7 +311,22 @@ class DDSuggest extends EditorSuggest<string> {
                 } else {
                         if (candidates.length) {
                                 phrase = candidates.sort((a, b) => a.length - b.length)[0];
-                                alias = phrase.replace(/\b\w/g, ch => ch.toUpperCase());
+                                const typedWords = query.split(/\s+/);
+                                const phraseWords = phrase.split(/\s+/);
+                                alias = phraseWords
+                                        .map((w, i) => {
+                                                const t = typedWords[i];
+                                                if (
+                                                        t &&
+                                                        t.length === w.length &&
+                                                        t.toLowerCase() === w.toLowerCase() &&
+                                                        ["last", "next"].includes(w.toLowerCase())
+                                                ) {
+                                                        return t;
+                                                }
+                                                return w.replace(/\b\w/g, ch => ch.toUpperCase());
+                                        })
+                                        .join(" ");
                         } else {
                                 alias = moment(targetDate, "YYYY-MM-DD").format("MMMM Do");
                         }
@@ -443,7 +458,22 @@ export default class DynamicDates extends Plugin {
                 } else if (this.settings.aliasFormat === "date") {
                         alias = m.format("MMMM Do");
                 } else {
-                        alias = phrase.replace(/\b\w/g, ch => ch.toUpperCase());
+                        const typedWords = phrase.split(/\s+/);
+                        const phraseWords = phrase.split(/\s+/);
+                        alias = phraseWords
+                                .map((w, i) => {
+                                        const t = typedWords[i];
+                                        if (
+                                                t &&
+                                                t.length === w.length &&
+                                                t.toLowerCase() === w.toLowerCase() &&
+                                                ["last", "next"].includes(w.toLowerCase())
+                                        ) {
+                                                return t;
+                                        }
+                                        return w.replace(/\b\w/g, ch => ch.toUpperCase());
+                                })
+                                .join(" ");
                 }
                 const folder = this.getDailyFolder();
                 const linkPath = (folder ? folder + "/" : "") + value;
