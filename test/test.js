@@ -235,8 +235,20 @@
   tSugg.context = { editor: { replaceRange:(t)=>inserted2.push(t), getLine:()=>'' }, start:{line:0,ch:0}, end:{line:0,ch:3}, query:'tom' };
   tSugg.selectSuggestion('2024-05-09', new KeyboardEvent({ key:'Tab', shiftKey:false }));
   assert.strictEqual(inserted2.length, 0);
-  tSugg.selectSuggestion('2024-05-09', new KeyboardEvent({ key:'Enter', shiftKey:false }));
+  const ev1 = new KeyboardEvent({ key:'Enter', shiftKey:false });
+  let called1 = false;
+  ev1.preventDefault = () => { called1 = true; };
+  tSugg.selectSuggestion('2024-05-09', ev1);
+  assert.ok(called1);
   assert.strictEqual(inserted2.pop(), '[[Daily/2024-05-09|Tomorrow]]');
+
+  const ev2 = new KeyboardEvent({ key:'Enter', shiftKey:true });
+  let called2 = false;
+  ev2.preventDefault = () => { called2 = true; };
+  tSugg.context = { editor: { replaceRange:(t)=>inserted2.push(t), getLine:()=>'' }, start:{line:0,ch:0}, end:{line:0,ch:3}, query:'tom' };
+  tSugg.selectSuggestion('2024-05-09', ev2);
+  assert.ok(called2);
+  assert.strictEqual(inserted2.pop(), '[[Daily/2024-05-09]]');
 
   /* ------------------------------------------------------------------ */
   /* custom dates feature                                               */
