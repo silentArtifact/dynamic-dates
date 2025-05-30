@@ -17,17 +17,23 @@ import {
 /* ------------------------------------------------------------------ */
 
 interface DDSettings {
-	dateFormat: string;
-	dailyFolder: string;
-	autoCreate: boolean;
-	keepAliasWithShift: boolean;
+        dateFormat: string;
+        dailyFolder: string;
+        autoCreate: boolean;
+        keepAliasWithShift: boolean;
+        aliasFormat: "capitalize" | "keep" | "date";
+        template: string;
+        openOnCreate: boolean;
 }
 
 const DEFAULT_SETTINGS: DDSettings = {
-	dateFormat: "YYYY-MM-DD",
-	dailyFolder: "",
-	autoCreate: false,
-	keepAliasWithShift: true,
+        dateFormat: "YYYY-MM-DD",
+        dailyFolder: "",
+        autoCreate: false,
+        keepAliasWithShift: true,
+        aliasFormat: "capitalize",
+        template: "",
+        openOnCreate: false,
 };
 
 /* ------------------------------------------------------------------ */
@@ -61,6 +67,8 @@ const PHRASES = BASE_WORDS.flatMap((w) =>
         WEEKDAYS.includes(w) ? [w, `last ${w}`, `next ${w}`] : [w],
 );
 
+PHRASES.push("next month", "last month", "next year", "last year");
+
 /**
  * Convert a natural-language phrase into a moment date instance.
  *
@@ -73,9 +81,24 @@ function phraseToMoment(phrase: string): moment.Moment | null {
         const now = moment();
         const lower = phrase.toLowerCase().trim();
 
-	if (lower === "today") return now;
-	if (lower === "yesterday") return now.clone().subtract(1, "day");
-	if (lower === "tomorrow") return now.clone().add(1, "day");
+        if (lower === "today") return now;
+        if (lower === "yesterday") return now.clone().subtract(1, "day");
+        if (lower === "tomorrow") return now.clone().add(1, "day");
+
+        const rel = lower.match(/^in (\d+) (day|days|week|weeks)$/);
+        if (rel) {
+                const n = parseInt(rel[1]);
+                if (!isNaN(n)) return now.clone().add(n * (rel[2].startsWith('week') ? 7 : 1), "day");
+        }
+        const ago = lower.match(/^(\d+) (day|days|week|weeks) ago$/);
+        if (ago) {
+                const n = parseInt(ago[1]);
+                if (!isNaN(n)) return now.clone().subtract(n * (ago[2].startsWith('week') ? 7 : 1), "day");
+        }
+        if (lower === "next month") return now.clone().add(1, "month");
+        if (lower === "last month") return now.clone().subtract(1, "month");
+        if (lower === "next year") return now.clone().add(1, "year");
+        if (lower === "last year") return now.clone().subtract(1, "year");
 
         const weekdays = WEEKDAYS;
 
@@ -97,9 +120,13 @@ function phraseToMoment(phrase: string): moment.Moment | null {
         }
 
         // Month + day (e.g., "august 20" or "aug 20th")
-        const md = lower.match(/^(january|february|march|april|may|june|july|august|september|october|november|december)\s+(\d{1,2}\w*)$/i);
+        const md = lower.match(/^(jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:tember)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)\s+(\d{1,2}\w*)$/i);
         if (md) {
-                const monthName = md[1];
+                let monthName = md[1];
+                if (monthName.length <= 3) {
+                        const idx = ["jan","feb","mar","apr","may","jun","jul","aug","sep","oct","nov","dec"].indexOf(monthName.slice(0,3));
+                        monthName = ["january","february","march","april","may","june","july","august","september","october","november","december"][idx];
+                }
                 const dayNum = parseInt(md[2]);
                 if (!isNaN(dayNum)) {
                         const target = now.clone().month(monthName).date(dayNum);
@@ -229,11 +256,17 @@ class DDSuggest extends EditorSuggest<string> {
                 let phrase = query.toLowerCase();
                 let alias: string;
 
-                if (candidates.length) {
-                        phrase = candidates.sort((a, b) => a.length - b.length)[0];
-                        alias = phrase.replace(/\b\w/g, ch => ch.toUpperCase());
-                } else {
+                if (settings.aliasFormat === "keep") {
+                        alias = query;
+                } else if (settings.aliasFormat === "date") {
                         alias = moment(targetDate, "YYYY-MM-DD").format("MMMM Do");
+                } else {
+                        if (candidates.length) {
+                                phrase = candidates.sort((a, b) => a.length - b.length)[0];
+                                alias = phrase.replace(/\b\w/g, ch => ch.toUpperCase());
+                        } else {
+                                alias = moment(targetDate, "YYYY-MM-DD").format("MMMM Do");
+                        }
                 }
 	
 		/* ----------------------------------------------------------------
@@ -273,7 +306,10 @@ class DDSuggest extends EditorSuggest<string> {
                                 ) {
                                         await this.app.vault.createFolder(folder);
                                 }
-                                await this.app.vault.create(target, "");
+                                await this.app.vault.create(target, settings.template || "");
+                                if (settings.openOnCreate && this.app.workspace?.openLinkText) {
+                                        this.app.workspace.openLinkText(target, "", false);
+                                }
                         })();
                 }
 	
@@ -295,23 +331,63 @@ class DDSuggest extends EditorSuggest<string> {
 export default class DynamicDates extends Plugin {
         settings: DDSettings = DEFAULT_SETTINGS;
 
-	async onload() {
-		await this.loadSettings();
-		this.registerEditorSuggest(new DDSuggest(this.app, this));
-		this.addSettingTab(new DDSettingTab(this.app, this));
-		console.log("Dynamic Dates loaded");
-	}
+        async onload() {
+                await this.loadSettings();
+                this.registerEditorSuggest(new DDSuggest(this.app, this));
+                this.addSettingTab(new DDSettingTab(this.app, this));
+                this.addCommand({
+                        id: "convert-dates",
+                        name: "Convert natural-language dates",
+                        editorCallback: (editor: Editor) => {
+                                const text = (editor as any).getValue();
+                                (editor as any).setValue(this.convertText(text));
+                        },
+                });
+                console.log("Dynamic Dates loaded");
+        }
 
 	onunload() {
 		console.log("Dynamic Dates unloaded");
 	}
 
-	async loadSettings() {
-		this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
-	}
-	async saveSettings() {
-		await this.saveData(this.settings);
-	}
+        async loadSettings() {
+                this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
+                const daily = (this.app as any).internalPlugins?.plugins?.["daily-notes"]?.instance?.options;
+                if (daily) {
+                        if (!this.settings.dateFormat) this.settings.dateFormat = daily.format;
+                        if (!this.settings.dailyFolder) this.settings.dailyFolder = daily.folder;
+                }
+        }
+        async saveSettings() {
+                await this.saveData(this.settings);
+        }
+
+        linkForPhrase(phrase: string): string | null {
+                const m = phraseToMoment(phrase);
+                if (!m) return null;
+                const value = m.format(this.settings.dateFormat);
+                const targetDate = m.format("YYYY-MM-DD");
+                let alias: string;
+                if (this.settings.aliasFormat === "keep") {
+                        alias = phrase;
+                } else if (this.settings.aliasFormat === "date") {
+                        alias = m.format("MMMM Do");
+                } else {
+                        alias = phrase.replace(/\b\w/g, ch => ch.toUpperCase());
+                }
+                const linkPath = (this.settings.dailyFolder ? this.settings.dailyFolder + "/" : "") + value;
+                return `[[${linkPath}|${alias}]]`;
+        }
+
+        convertText(text: string): string {
+                const phrases = [...PHRASES].sort((a, b) => b.length - a.length);
+                for (const p of phrases) {
+                        const esc = p.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+                        const re = new RegExp(`\\b${esc}\\b`, "gi");
+                        text = text.replace(re, (m) => this.linkForPhrase(m.toLowerCase()) ?? m);
+                }
+                return text;
+        }
 }
 
 /** UI for the plugin settings displayed in Obsidian's settings pane. */
@@ -349,26 +425,61 @@ class DDSettingTab extends PluginSettingTab {
                                         }),
 			);
 
-		new Setting(containerEl)
-			.setName("Create note if missing")
-			.addToggle((t) =>
-				t
-					.setValue(this.plugin.settings.autoCreate)
+                new Setting(containerEl)
+                        .setName("Create note if missing")
+                        .addToggle((t) =>
+                                t
+                                        .setValue(this.plugin.settings.autoCreate)
                                         .onChange(async (v: boolean) => {
                                                 this.plugin.settings.autoCreate = v;
                                                 await this.plugin.saveSettings();
                                         }),
-			);
+                        );
 
-		new Setting(containerEl)
-			.setName("Shift+Tab keeps alias")
-			.addToggle((t) =>
-				t
-					.setValue(this.plugin.settings.keepAliasWithShift)
+                new Setting(containerEl)
+                        .setName("Open note on creation")
+                        .addToggle((t) =>
+                                t
+                                        .setValue(this.plugin.settings.openOnCreate)
+                                        .onChange(async (v: boolean) => {
+                                                this.plugin.settings.openOnCreate = v;
+                                                await this.plugin.saveSettings();
+                                        }),
+                        );
+
+                new Setting(containerEl)
+                        .setName("Shift+Tab keeps alias")
+                        .addToggle((t) =>
+                                t
+                                        .setValue(this.plugin.settings.keepAliasWithShift)
                                         .onChange(async (v: boolean) => {
                                                 this.plugin.settings.keepAliasWithShift = v;
                                                 await this.plugin.saveSettings();
                                         }),
-			);
-	}
+                        );
+
+                new Setting(containerEl)
+                        .setName("Alias style")
+                        .addText((t) =>
+                                t
+                                        .setPlaceholder("capitalize")
+                                        .setValue(this.plugin.settings.aliasFormat)
+                                        .onChange(async (v: string) => {
+                                                this.plugin.settings.aliasFormat = (v.trim() as any) || "capitalize";
+                                                await this.plugin.saveSettings();
+                                        }),
+                        );
+
+                new Setting(containerEl)
+                        .setName("Template for new notes")
+                        .addText((t) =>
+                                t
+                                        .setPlaceholder("")
+                                        .setValue(this.plugin.settings.template)
+                                        .onChange(async (v: string) => {
+                                                this.plugin.settings.template = v;
+                                                await this.plugin.saveSettings();
+                                        }),
+                        );
+        }
 }
