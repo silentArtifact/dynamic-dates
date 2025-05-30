@@ -51,8 +51,10 @@ declare module "obsidian" {
     export class Setting {
         constructor(el: HTMLElement);
         setName(name: string): this;
+        setDesc(desc: string): this;
         addText(cb: (t: any) => any): this;
         addToggle(cb: (t: any) => any): this;
+        addDropdown(cb: (d: any) => any): this;
     }
 
     export interface TFile {}
