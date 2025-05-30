@@ -47,7 +47,7 @@ var BASE_WORDS = [
 var PHRASES = BASE_WORDS.flatMap((w) => [w, `last ${w}`, `next ${w}`]);
 function phraseToMoment(phrase) {
   const now = (0, import_obsidian.moment)();
-  const lower = phrase.toLowerCase();
+  const lower = phrase.toLowerCase().trim();
   if (lower === "today") return now;
   if (lower === "yesterday") return now.clone().subtract(1, "day");
   if (lower === "tomorrow") return now.clone().add(1, "day");
@@ -75,6 +75,18 @@ function phraseToMoment(phrase) {
       return now.clone().subtract(diff, "day");
     }
   }
+
+  const md = lower.match(/^(january|february|march|april|may|june|july|august|september|october|november|december)\s+(\d{1,2}\w*)$/i);
+  if (md) {
+    const monthName = md[1];
+    const dayNum = parseInt(md[2]);
+    if (!isNaN(dayNum)) {
+      const target = now.clone().month(monthName).date(dayNum);
+      if (!target.isValid()) return null;
+      if (target.isBefore(now, "day")) target.add(1, "year");
+      return target;
+    }
+  }
   return null;
 }
 var DDSuggest = class extends import_obsidian.EditorSuggest {
@@ -88,25 +100,36 @@ var DDSuggest = class extends import_obsidian.EditorSuggest {
     const tokens = lineBefore.split(/\s+/).filter((t) => t.length);
     if (tokens.length === 0) return null;
     let prefix = tokens[tokens.length - 1];
-    const maybePrev = tokens[tokens.length - 2]?.toLowerCase();
-    const hasQualifier = ["last", "next"].includes(maybePrev);
-    if (hasQualifier) prefix = `${maybePrev} ${prefix}`;
+    let startCh = cursor.ch - prefix.length;
+    const maybePrev = tokens[tokens.length - 2];
+    let hasQualifier = false;
+    if (maybePrev) {
+      const combined = `${maybePrev} ${prefix}`;
+      if (phraseToMoment(combined)) {
+        prefix = combined;
+        startCh -= maybePrev.length + 1;
+      } else if (["last", "next"].includes(maybePrev.toLowerCase())) {
+        prefix = combined;
+        startCh -= maybePrev.length + 1;
+        hasQualifier = true;
+      }
+    }
     const query = prefix.toLowerCase().trim();
     if (["l", "la", "las", "last", "n", "ne", "nex", "next"].includes(query))
       return null;
     if (!hasQualifier && query.length < 3) return null;
-    if (!PHRASES.some((p) => p.startsWith(query))) return null;
+    if (!PHRASES.some((p) => p.startsWith(query)) && !phraseToMoment(query)) return null;
     return {
-      start: { line: cursor.line, ch: cursor.ch - prefix.length },
+      start: { line: cursor.line, ch: startCh },
       end: { line: cursor.line, ch: cursor.ch },
       query
     };
   }
   getSuggestions(ctx) {
     const q = ctx.query;
-    if (PHRASES.includes(q)) {
-      const dt = phraseToMoment(q);
-      return dt ? [dt.format(this.plugin.settings.dateFormat)] : [];
+    const direct = phraseToMoment(q);
+    if (direct) {
+      return [direct.format(this.plugin.settings.dateFormat)];
     }
     const uniq = /* @__PURE__ */ new Set();
     for (const p of PHRASES) {
@@ -127,7 +150,12 @@ var DDSuggest = class extends import_obsidian.EditorSuggest {
       (p) => p.startsWith(query.toLowerCase()) && phraseToMoment(p)?.format("YYYY-MM-DD") === targetDate
     );
     const phrase = (candidates.sort((a, b) => a.length - b.length)[0] ?? query).toLowerCase();
-    const alias = phrase.replace(/\b\w/g, (ch) => ch.toUpperCase());
+    let alias;
+    if (candidates.length) {
+      alias = phrase.replace(/\b\w/g, (ch) => ch.toUpperCase());
+    } else {
+      alias = (0, import_obsidian.moment)(targetDate, "YYYY-MM-DD").format("MMMM Do");
+    }
     const linkPath = (settings.dailyFolder ? settings.dailyFolder + "/" : "") + value;
     const link = `[[${linkPath}|${alias}]]`;
     const keepTypedWords = settings.keepAliasWithShift && ev instanceof KeyboardEvent && ev.shiftKey;
