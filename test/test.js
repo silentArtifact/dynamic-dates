@@ -71,7 +71,8 @@
   const BASE_WORDS = ['today','yesterday','tomorrow', ...WEEKDAYS];
   const PHRASES = BASE_WORDS.flatMap(w => WEEKDAYS.includes(w) ? [w, `last ${w}`, `next ${w}`] : [w]);
 
-  const context = { moment, WEEKDAYS, BASE_WORDS, PHRASES, EditorSuggest, KeyboardEvent, Plugin, PluginSettingTab, Setting };
+  const obsidian_1 = { moment, EditorSuggest, KeyboardEvent, Plugin, PluginSettingTab, Setting };
+  const context = { moment, WEEKDAYS, BASE_WORDS, PHRASES, EditorSuggest, KeyboardEvent, Plugin, PluginSettingTab, Setting, obsidian_1 };
   vm.createContext(context);
   vm.runInContext(funcSrc[0], context);
   vm.runInContext(settingsSrc[0], context);

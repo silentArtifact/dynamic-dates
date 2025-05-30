@@ -3,6 +3,14 @@ A plugin for Obsidian that lets you type natural language dates ("today", "next 
 
 ## Building
 
+Install dependencies first:
+
+```bash
+npm install
+```
+
+Then run the build command:
+
 ```bash
 npm run build
 ```

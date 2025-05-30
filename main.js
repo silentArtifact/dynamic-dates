@@ -1,4 +1,6 @@
-import { EditorSuggest, moment, Plugin, PluginSettingTab, Setting, } from "obsidian";
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+const obsidian_1 = require("obsidian");
 const DEFAULT_SETTINGS = {
     dateFormat: "YYYY-MM-DD",
     dailyFolder: "",
@@ -43,7 +45,7 @@ PHRASES.push("next month", "last month", "next year", "last year");
  * recognised.  If the phrase cannot be parsed, `null` is returned.
  */
 function phraseToMoment(phrase) {
-    const now = moment();
+    const now = (0, obsidian_1.moment)();
     const lower = phrase.toLowerCase().trim();
     if (lower === "today")
         return now;
@@ -115,7 +117,7 @@ function phraseToMoment(phrase) {
  * language expressions.  Selecting a suggestion will replace the
  * typed phrase with a wikilink to the appropriate daily note.
  */
-class DDSuggest extends EditorSuggest {
+class DDSuggest extends obsidian_1.EditorSuggest {
     plugin;
     constructor(app, plugin) {
         super(app);
@@ -201,7 +203,7 @@ class DDSuggest extends EditorSuggest {
         /* ----------------------------------------------------------------
            1. Find the canonical phrase that maps to this calendar date
         ----------------------------------------------------------------- */
-        const targetDate = moment(value, settings.dateFormat).format("YYYY-MM-DD");
+        const targetDate = (0, obsidian_1.moment)(value, settings.dateFormat).format("YYYY-MM-DD");
         const candidates = PHRASES.filter(p => p.startsWith(query.toLowerCase()) &&
             phraseToMoment(p)?.format("YYYY-MM-DD") === targetDate);
         let phrase = query.toLowerCase();
@@ -210,7 +212,7 @@ class DDSuggest extends EditorSuggest {
             alias = query;
         }
         else if (settings.aliasFormat === "date") {
-            alias = moment(targetDate, "YYYY-MM-DD").format("MMMM Do");
+            alias = (0, obsidian_1.moment)(targetDate, "YYYY-MM-DD").format("MMMM Do");
         }
         else {
             if (candidates.length) {
@@ -218,7 +220,7 @@ class DDSuggest extends EditorSuggest {
                 alias = phrase.replace(/\b\w/g, ch => ch.toUpperCase());
             }
             else {
-                alias = moment(targetDate, "YYYY-MM-DD").format("MMMM Do");
+                alias = (0, obsidian_1.moment)(targetDate, "YYYY-MM-DD").format("MMMM Do");
             }
         }
         /* ----------------------------------------------------------------
@@ -262,7 +264,7 @@ class DDSuggest extends EditorSuggest {
  * settings tab so users can customise how dates are formatted and
  * where daily notes are stored.
  */
-export default class DynamicDates extends Plugin {
+class DynamicDates extends obsidian_1.Plugin {
     settings = DEFAULT_SETTINGS;
     async onload() {
         await this.loadSettings();
@@ -323,8 +325,9 @@ export default class DynamicDates extends Plugin {
         return text;
     }
 }
+exports.default = DynamicDates;
 /** UI for the plugin settings displayed in Obsidian's settings pane. */
-class DDSettingTab extends PluginSettingTab {
+class DDSettingTab extends obsidian_1.PluginSettingTab {
     plugin;
     constructor(app, plugin) {
         super(app, plugin);
@@ -333,7 +336,7 @@ class DDSettingTab extends PluginSettingTab {
     display() {
         const { containerEl } = this;
         containerEl.empty();
-        new Setting(containerEl)
+        new obsidian_1.Setting(containerEl)
             .setName("Date format")
             .addText((t) => t
             .setPlaceholder("YYYY-MM-DD")
@@ -342,7 +345,7 @@ class DDSettingTab extends PluginSettingTab {
             this.plugin.settings.dateFormat = v.trim() || "YYYY-MM-DD";
             await this.plugin.saveSettings();
         }));
-        new Setting(containerEl)
+        new obsidian_1.Setting(containerEl)
             .setName("Daily-note folder")
             .addText((t) => t
             .setPlaceholder("Daily")
@@ -351,7 +354,7 @@ class DDSettingTab extends PluginSettingTab {
             this.plugin.settings.dailyFolder = v.trim();
             await this.plugin.saveSettings();
         }));
-        new Setting(containerEl)
+        new obsidian_1.Setting(containerEl)
             .setName("Create note if missing")
             .addToggle((t) => t
             .setValue(this.plugin.settings.autoCreate)
@@ -359,7 +362,7 @@ class DDSettingTab extends PluginSettingTab {
             this.plugin.settings.autoCreate = v;
             await this.plugin.saveSettings();
         }));
-        new Setting(containerEl)
+        new obsidian_1.Setting(containerEl)
             .setName("Open note on creation")
             .addToggle((t) => t
             .setValue(this.plugin.settings.openOnCreate)
@@ -367,7 +370,7 @@ class DDSettingTab extends PluginSettingTab {
             this.plugin.settings.openOnCreate = v;
             await this.plugin.saveSettings();
         }));
-        new Setting(containerEl)
+        new obsidian_1.Setting(containerEl)
             .setName("Shift+Tab keeps alias")
             .addToggle((t) => t
             .setValue(this.plugin.settings.keepAliasWithShift)
@@ -375,7 +378,7 @@ class DDSettingTab extends PluginSettingTab {
             this.plugin.settings.keepAliasWithShift = v;
             await this.plugin.saveSettings();
         }));
-        new Setting(containerEl)
+        new obsidian_1.Setting(containerEl)
             .setName("Alias style")
             .addText((t) => t
             .setPlaceholder("capitalize")
@@ -384,7 +387,7 @@ class DDSettingTab extends PluginSettingTab {
             this.plugin.settings.aliasFormat = v.trim() || "capitalize";
             await this.plugin.saveSettings();
         }));
-        new Setting(containerEl)
+        new obsidian_1.Setting(containerEl)
             .setName("Template for new notes")
             .addText((t) => t
             .setPlaceholder("")
