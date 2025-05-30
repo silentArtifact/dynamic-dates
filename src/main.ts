@@ -328,10 +328,10 @@ class DDSuggest extends EditorSuggest<string> {
 		   3. Insert, respecting the Shift-modifier behaviour
 		----------------------------------------------------------------- */
                 let final = link;
-                if (ev instanceof KeyboardEvent) {
-                        const key = ev.key === "Enter" ? "Enter" : ev.key === "Tab" ? "Tab" : "";
+                if (ev && (ev as any).key != null) {
+                        const key = (ev as any).key === "Enter" ? "Enter" : (ev as any).key === "Tab" ? "Tab" : "";
                         if (key && key !== settings.acceptKey) return;
-                        if (ev.shiftKey && settings.noAliasWithShift) {
+                        if ((ev as any).shiftKey && settings.noAliasWithShift) {
                                 final = `[[${linkPath}]]`;
                         }
                 }

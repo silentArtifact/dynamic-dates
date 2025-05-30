@@ -276,7 +276,7 @@ class DDSuggest extends obsidian_1.EditorSuggest {
            3. Insert, respecting the Shift-modifier behaviour
         ----------------------------------------------------------------- */
         let final = link;
-        if (ev instanceof KeyboardEvent) {
+        if (ev && ev.key != null) {
             const key = ev.key === "Enter" ? "Enter" : ev.key === "Tab" ? "Tab" : "";
             if (key && key !== settings.acceptKey)
                 return;
