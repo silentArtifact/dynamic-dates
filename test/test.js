@@ -108,7 +108,7 @@
   /* ------------------------------------------------------------------ */
   /* onTrigger guard rails                                             */
   /* ------------------------------------------------------------------ */
-  const plugin = { settings: { dateFormat: 'YYYY-MM-DD', dailyFolder: '', autoCreate: false, keepAliasWithShift: true, aliasFormat:'capitalize', openOnCreate:false } };
+  const plugin = { settings: { dateFormat: 'YYYY-MM-DD', dailyFolder: '', autoCreate: false, acceptKey:'Tab', noAliasWithShift: true, aliasFormat:'capitalize', openOnCreate:false } };
   const app = { vault: {} };
   const sugg = new DDSuggest(app, plugin);
 
@@ -121,21 +121,21 @@
   const inserted = [];
   const editor = { getLine:()=>'', replaceRange:(t)=>inserted.push(t) };
   sugg.context = { editor, start:{line:0,ch:0}, end:{line:0,ch:3}, query:'tom' };
-  sugg.selectSuggestion('2024-05-09', new KeyboardEvent({ shiftKey:false }));
+  sugg.selectSuggestion('2024-05-09', new KeyboardEvent({ shiftKey:false, key:'Tab' }));
   assert.strictEqual(inserted.pop(), '[[2024-05-09|Tomorrow]]');
 
   sugg.context = { editor, start:{line:0,ch:0}, end:{line:0,ch:3}, query:'tom' };
-  sugg.selectSuggestion('2024-05-09', new KeyboardEvent({ shiftKey:true }));
-  assert.strictEqual(inserted.pop(), 'tom [[2024-05-09|Tomorrow]]');
+  sugg.selectSuggestion('2024-05-09', new KeyboardEvent({ shiftKey:true, key:'Tab' }));
+  assert.strictEqual(inserted.pop(), '[[2024-05-09]]');
 
   plugin.settings.aliasFormat = 'keep';
   sugg.context = { editor, start:{line:0,ch:0}, end:{line:0,ch:3}, query:'tom' };
-  sugg.selectSuggestion('2024-05-09', new KeyboardEvent({ shiftKey:false }));
+  sugg.selectSuggestion('2024-05-09', new KeyboardEvent({ shiftKey:false, key:'Tab' }));
   assert.strictEqual(inserted.pop(), '[[2024-05-09|tom]]');
 
   plugin.settings.aliasFormat = 'date';
   sugg.context = { editor, start:{line:0,ch:0}, end:{line:0,ch:3}, query:'tom' };
-  sugg.selectSuggestion('2024-05-09', new KeyboardEvent({ shiftKey:false }));
+  sugg.selectSuggestion('2024-05-09', new KeyboardEvent({ shiftKey:false, key:'Tab' }));
   assert.strictEqual(inserted.pop(), '[[2024-05-09|May 9th]]');
 
   plugin.settings.aliasFormat = 'capitalize';
@@ -163,7 +163,7 @@
   sugg.app = app;
   sugg.plugin = plugin;
   sugg.context = { editor: ed2, start:{line:0,ch:0}, end:{line:0,ch:8}, query:'tomorrow' };
-  sugg.selectSuggestion('2024-05-09', new KeyboardEvent({ shiftKey:false }));
+  sugg.selectSuggestion('2024-05-09', new KeyboardEvent({ shiftKey:false, key:'Tab' }));
   await new Promise(r => setTimeout(r, 0));
   assert.deepStrictEqual(calls, [
     ['insert', '[[Daily/2024-05-09|Tomorrow]]'],

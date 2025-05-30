@@ -5,7 +5,8 @@ const DEFAULT_SETTINGS = {
     dateFormat: "YYYY-MM-DD",
     dailyFolder: "",
     autoCreate: false,
-    keepAliasWithShift: true,
+    acceptKey: "Tab",
+    noAliasWithShift: false,
     aliasFormat: "capitalize",
     openOnCreate: false,
 };
@@ -251,10 +252,16 @@ class DDSuggest extends obsidian_1.EditorSuggest {
         /* ----------------------------------------------------------------
            3. Insert, respecting the Shift-modifier behaviour
         ----------------------------------------------------------------- */
-        const keepTypedWords = settings.keepAliasWithShift &&
-            ev instanceof KeyboardEvent &&
-            ev.shiftKey;
-        editor.replaceRange(keepTypedWords ? `${query} ${link}` : link, start, end);
+        let final = link;
+        if (ev instanceof KeyboardEvent) {
+            const key = ev.key === "Enter" ? "Enter" : ev.key === "Tab" ? "Tab" : "";
+            if (key && key !== settings.acceptKey)
+                return;
+            if (ev.shiftKey && settings.noAliasWithShift) {
+                final = `[[${linkPath}]]`;
+            }
+        }
+        editor.replaceRange(final, start, end);
         /* ----------------------------------------------------------------
            4. Optional auto-create note
         ----------------------------------------------------------------- */
@@ -398,11 +405,21 @@ class DDSettingTab extends obsidian_1.PluginSettingTab {
             await this.plugin.saveSettings();
         }));
         new obsidian_1.Setting(containerEl)
-            .setName("Shift+Tab keeps alias")
-            .addToggle((t) => t
-            .setValue(this.plugin.settings.keepAliasWithShift)
+            .setName("Accept key")
+            .addText((t) => t
+            .setPlaceholder("Tab")
+            .setValue(this.plugin.settings.acceptKey)
             .onChange(async (v) => {
-            this.plugin.settings.keepAliasWithShift = v;
+            const val = v.trim() === "Enter" ? "Enter" : "Tab";
+            this.plugin.settings.acceptKey = val;
+            await this.plugin.saveSettings();
+        }));
+        new obsidian_1.Setting(containerEl)
+            .setName("Shift+<key> inserts plain link")
+            .addToggle((t) => t
+            .setValue(this.plugin.settings.noAliasWithShift)
+            .onChange(async (v) => {
+            this.plugin.settings.noAliasWithShift = v;
             await this.plugin.saveSettings();
         }));
         new obsidian_1.Setting(containerEl)
