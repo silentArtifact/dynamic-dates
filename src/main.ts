@@ -328,18 +328,25 @@ class DDSuggest extends EditorSuggest<string> {
 		   3. Insert, respecting the Shift-modifier behaviour
 		----------------------------------------------------------------- */
                 let final = link;
+                let finalEnd = end;
                 if (ev && (ev as any).key != null) {
                         const key = (ev as any).key === "Enter" ? "Enter" : (ev as any).key === "Tab" ? "Tab" : "";
                         if (key && key !== settings.acceptKey) return;
                         if ((ev as any).shiftKey && settings.noAliasWithShift) {
                                 final = `[[${linkPath}]]`;
                         }
+                        if ((ev as any).key === "Enter" && editor.getLine(end.line + 1) !== undefined) {
+                                finalEnd = { line: end.line + 1, ch: 0 } as EditorPosition;
+                        }
+                        if (typeof (ev as any).preventDefault === "function") {
+                                (ev as any).preventDefault();
+                        }
                 }
 
                 editor.replaceRange(
                         final,
                         start,
-                        end,
+                        finalEnd,
                 );
 	
 		/* ----------------------------------------------------------------

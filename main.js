@@ -276,6 +276,7 @@ class DDSuggest extends obsidian_1.EditorSuggest {
            3. Insert, respecting the Shift-modifier behaviour
         ----------------------------------------------------------------- */
         let final = link;
+        let finalEnd = end;
         if (ev && ev.key != null) {
             const key = ev.key === "Enter" ? "Enter" : ev.key === "Tab" ? "Tab" : "";
             if (key && key !== settings.acceptKey)
@@ -283,8 +284,14 @@ class DDSuggest extends obsidian_1.EditorSuggest {
             if (ev.shiftKey && settings.noAliasWithShift) {
                 final = `[[${linkPath}]]`;
             }
+            if (ev.key === "Enter" && editor.getLine(end.line + 1) !== undefined) {
+                finalEnd = { line: end.line + 1, ch: 0 };
+            }
+            if (typeof ev.preventDefault === "function") {
+                ev.preventDefault();
+            }
         }
-        editor.replaceRange(final, start, end);
+        editor.replaceRange(final, start, finalEnd);
         /* ----------------------------------------------------------------
            4. Optional auto-create note
         ----------------------------------------------------------------- */
