@@ -1,3 +1,18 @@
 # dynamic-dates
-A plugin for Obsidian designed to make it quick and natural to link to daily notes using natural language.
-Written completely and totally via LLM, so please don't give me any credit for the design; I'm just telling it what I want it to do and testing it to see if it works.
+A plugin for Obsidian that lets you type natural language dates ("today", "next Friday"…) and automatically link them to your daily notes.
+
+## Building
+
+```bash
+npm run build
+```
+
+## Packaging for the community plugin store
+
+Run the following command to create a release zip containing `main.js` and `manifest.json`:
+
+```bash
+npm run zip
+```
+
+Upload the generated `dynamic-dates-<version>.zip` file when creating a GitHub release.
