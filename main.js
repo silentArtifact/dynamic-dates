@@ -283,6 +283,9 @@ class DDSuggest extends obsidian_1.EditorSuggest {
             if (ev.shiftKey && settings.noAliasWithShift) {
                 final = `[[${linkPath}]]`;
             }
+            if (typeof ev.preventDefault === "function") {
+                ev.preventDefault();
+            }
         }
         editor.replaceRange(final, start, end);
         /* ----------------------------------------------------------------

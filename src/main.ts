@@ -334,6 +334,9 @@ class DDSuggest extends EditorSuggest<string> {
                         if ((ev as any).shiftKey && settings.noAliasWithShift) {
                                 final = `[[${linkPath}]]`;
                         }
+                        if (typeof (ev as any).preventDefault === "function") {
+                                (ev as any).preventDefault();
+                        }
                 }
 
                 editor.replaceRange(
