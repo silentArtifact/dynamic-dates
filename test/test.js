@@ -35,6 +35,7 @@
       if (unit === 'month') this.d.setMonth(this.d.getMonth() - n);
       return this;
     }
+    year(y) { if (y == null) return this.d.getFullYear(); this.d.setFullYear(y); return this; }
     weekday() { return this.d.getDay(); }
     month(name) { this.d.setMonth(MONTHS[name.toLowerCase()]); return this; }
     date(n) { if (n == null) return this.d.getDate(); this._setDay = n; this.d.setDate(n); return this; }
@@ -108,7 +109,7 @@
   /* ------------------------------------------------------------------ */
   /* onTrigger guard rails                                             */
   /* ------------------------------------------------------------------ */
-  const plugin = { settings: { dateFormat: 'YYYY-MM-DD', dailyFolder: '', autoCreate: false, acceptKey:'Tab', noAliasWithShift: true, aliasFormat:'capitalize', openOnCreate:false } };
+  const plugin = { settings: { dateFormat: 'YYYY-MM-DD', dailyFolder: '', autoCreate: false, acceptKey:'Tab', noAliasWithShift: true, aliasFormat:'capitalize', openOnCreate:false }, allPhrases: () => PHRASES };
   const app = { vault: {} };
   const sugg = new DDSuggest(app, plugin);
 
@@ -211,7 +212,7 @@
   /* ------------------------------------------------------------------ */
   /* onTrigger additional guard rails                                   */
   /* ------------------------------------------------------------------ */
-  const tPlugin = { settings: Object.assign({}, plugin.settings, { autoCreate: false }) };
+  const tPlugin = { settings: Object.assign({}, plugin.settings, { autoCreate: false }), allPhrases: () => PHRASES };
   const tApp = { vault:{}, workspace:{} };
   const tSugg = new DDSuggest(tApp, tPlugin);
   assert.strictEqual(tSugg.onTrigger({line:0,ch:4}, { getLine:()=> 'next' }, null), null);
@@ -229,6 +230,23 @@
   assert.strictEqual(inserted2.length, 0);
   tSugg.selectSuggestion('2024-05-09', new KeyboardEvent({ key:'Enter', shiftKey:false }));
   assert.strictEqual(inserted2.pop(), '[[Daily/2024-05-09|Tomorrow]]');
+
+  /* ------------------------------------------------------------------ */
+  /* custom dates feature                                               */
+  /* ------------------------------------------------------------------ */
+  phraseToMoment.customDates = { 'fall start': '08-22' };
+  assert.strictEqual(fmt(phraseToMoment('fall start')), '2024-08-22');
+  moment.now = new Date('2024-09-30');
+  assert.strictEqual(fmt(phraseToMoment('fall start')), '2025-08-22');
+  moment.now = new Date('2024-05-08');
+  const cPlugin = new DynamicDates();
+  cPlugin.settings = Object.assign({}, plugin.settings, { customDates: { 'fall start':'08-22' }, dailyFolder: '' });
+  phraseToMoment.customDates = { 'fall start':'08-22' };
+  const cSugg = new DDSuggest({ vault:{}, workspace:{} }, cPlugin);
+  const list = cSugg.getSuggestions({ query:'fall st' });
+  assert.ok(list.includes('2024-08-22'));
+  const converted2 = cPlugin.convertText('see you fall start');
+  assert.strictEqual(converted2, 'see you [[2024-08-22|Fall Start]]');
 
   console.log('All tests passed');
 })();

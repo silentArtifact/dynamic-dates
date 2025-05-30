@@ -24,6 +24,7 @@ interface DDSettings {
         noAliasWithShift: boolean;
         aliasFormat: "capitalize" | "keep" | "date";
         openOnCreate: boolean;
+        customDates: Record<string, string>;
 }
 
 const DEFAULT_SETTINGS: DDSettings = {
@@ -34,6 +35,7 @@ const DEFAULT_SETTINGS: DDSettings = {
         noAliasWithShift: false,
         aliasFormat: "capitalize",
         openOnCreate: false,
+        customDates: {},
 };
 
 /* ------------------------------------------------------------------ */
@@ -79,6 +81,17 @@ const PHRASES = BASE_WORDS.flatMap((w) =>
 function phraseToMoment(phrase: string): moment.Moment | null {
         const now = moment();
         const lower = phrase.toLowerCase().trim();
+
+        const customMap: Record<string,string> = (phraseToMoment as any).customDates || {};
+        if (lower in customMap) {
+                const val = customMap[lower];
+                const m = moment(val, ["MM-DD","M-D","MMMM D","MMM D"], true);
+                if (m.isValid()) {
+                        m.year(now.year());
+                        if (m.isBefore(now, "day")) m.add(1, "year");
+                        return m;
+                }
+        }
 
         if (lower === "today") return now;
         if (lower === "yesterday") return now.clone().subtract(1, "day");
@@ -161,6 +174,8 @@ function phraseToMoment(phrase: string): moment.Moment | null {
         return null;
 }
 
+(phraseToMoment as any).customDates = {};
+
 /* ------------------------------------------------------------------ */
 /* Suggest box                                                        */
 /* ------------------------------------------------------------------ */
@@ -223,7 +238,8 @@ class DDSuggest extends EditorSuggest<string> {
 		if (!hasQualifier && query.length < 3) return null;
 
                 // must map to a known phrase or a recognised month/day
-                if (!PHRASES.some((p) => p.startsWith(query)) && !phraseToMoment(query)) return null;
+                const all = this.plugin.allPhrases();
+                if (!all.some((p) => p.startsWith(query)) && !phraseToMoment(query)) return null;
 
                 return {
                         start: { line: cursor.line, ch: startCh },
@@ -245,7 +261,7 @@ class DDSuggest extends EditorSuggest<string> {
                 }
 
                 const uniq = new Set<string>();
-                for (const p of PHRASES) {
+                for (const p of this.plugin.allPhrases()) {
                         if (!p.startsWith(q)) continue;
                         const dt = phraseToMoment(p);
                         if (dt) uniq.add(dt.format(this.plugin.settings.dateFormat));
@@ -271,7 +287,7 @@ class DDSuggest extends EditorSuggest<string> {
 		----------------------------------------------------------------- */
                 const targetDate = moment(value, settings.dateFormat).format("YYYY-MM-DD");
 
-                const candidates = PHRASES.filter(p =>
+                const candidates = this.plugin.allPhrases().filter(p =>
                         p.startsWith(query.toLowerCase()) &&
                         phraseToMoment(p)?.format("YYYY-MM-DD") === targetDate
                 );
@@ -364,6 +380,10 @@ class DDSuggest extends EditorSuggest<string> {
 export default class DynamicDates extends Plugin {
         settings: DDSettings = DEFAULT_SETTINGS;
 
+        allPhrases(): string[] {
+                return [...PHRASES, ...Object.keys(this.settings.customDates || {}).map(p => p.toLowerCase())];
+        }
+
         async onload() {
                 await this.loadSettings();
                 this.registerEditorSuggest(new DDSuggest(this.app, this));
@@ -390,9 +410,12 @@ export default class DynamicDates extends Plugin {
                         if (!this.settings.dateFormat) this.settings.dateFormat = daily.format;
                         if (!this.settings.dailyFolder) this.settings.dailyFolder = daily.folder;
                 }
+                if (!this.settings.customDates) this.settings.customDates = {};
+                (phraseToMoment as any).customDates = Object.fromEntries(Object.entries(this.settings.customDates).map(([k,v]) => [k.toLowerCase(), v]));
         }
         async saveSettings() {
                 await this.saveData(this.settings);
+                (phraseToMoment as any).customDates = Object.fromEntries(Object.entries(this.settings.customDates || {}).map(([k,v]) => [k.toLowerCase(), v]));
         }
 
         linkForPhrase(phrase: string): string | null {
@@ -413,7 +436,7 @@ export default class DynamicDates extends Plugin {
         }
 
         convertText(text: string): string {
-                const phrases = [...PHRASES].sort((a, b) => b.length - a.length);
+                const phrases = [...this.allPhrases()].sort((a, b) => b.length - a.length);
                 for (const p of phrases) {
                         const esc = p.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
                         const re = new RegExp(`\\b${esc}\\b`, "gi");
@@ -513,6 +536,20 @@ class DDSettingTab extends PluginSettingTab {
                                         .setValue(this.plugin.settings.aliasFormat)
                                         .onChange(async (v: string) => {
                                                 this.plugin.settings.aliasFormat = (v.trim() as any) || "capitalize";
+                                                await this.plugin.saveSettings();
+                                        }),
+                        );
+
+                new Setting(containerEl)
+                        .setName("Custom dates (JSON)")
+                        .addText((t) =>
+                                t
+                                        .setPlaceholder('{"phrase":"MM-DD"}')
+                                        .setValue(JSON.stringify(this.plugin.settings.customDates))
+                                        .onChange(async (v: string) => {
+                                                try {
+                                                        this.plugin.settings.customDates = JSON.parse(v || '{}');
+                                                } catch {}
                                                 await this.plugin.saveSettings();
                                         }),
                         );

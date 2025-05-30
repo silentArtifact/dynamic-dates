@@ -9,6 +9,7 @@ const DEFAULT_SETTINGS = {
     noAliasWithShift: false,
     aliasFormat: "capitalize",
     openOnCreate: false,
+    customDates: {},
 };
 /* ------------------------------------------------------------------ */
 /* Phrase helpers                                                     */
@@ -46,6 +47,17 @@ const PHRASES = BASE_WORDS.flatMap((w) => WEEKDAYS.includes(w) ? [w, `last ${w}`
 function phraseToMoment(phrase) {
     const now = (0, obsidian_1.moment)();
     const lower = phrase.toLowerCase().trim();
+    const customMap = phraseToMoment.customDates || {};
+    if (lower in customMap) {
+        const val = customMap[lower];
+        const m = (0, obsidian_1.moment)(val, ["MM-DD", "M-D", "MMMM D", "MMM D"], true);
+        if (m.isValid()) {
+            m.year(now.year());
+            if (m.isBefore(now, "day"))
+                m.add(1, "year");
+            return m;
+        }
+    }
     if (lower === "today")
         return now;
     if (lower === "yesterday")
@@ -130,6 +142,7 @@ function phraseToMoment(phrase) {
     }
     return null;
 }
+phraseToMoment.customDates = {};
 /* ------------------------------------------------------------------ */
 /* Suggest box                                                        */
 /* ------------------------------------------------------------------ */
@@ -182,7 +195,8 @@ class DDSuggest extends obsidian_1.EditorSuggest {
         if (!hasQualifier && query.length < 3)
             return null;
         // must map to a known phrase or a recognised month/day
-        if (!PHRASES.some((p) => p.startsWith(query)) && !phraseToMoment(query))
+        const all = this.plugin.allPhrases();
+        if (!all.some((p) => p.startsWith(query)) && !phraseToMoment(query))
             return null;
         return {
             start: { line: cursor.line, ch: startCh },
@@ -201,7 +215,7 @@ class DDSuggest extends obsidian_1.EditorSuggest {
             return [direct.format(this.plugin.settings.dateFormat)];
         }
         const uniq = new Set();
-        for (const p of PHRASES) {
+        for (const p of this.plugin.allPhrases()) {
             if (!p.startsWith(q))
                 continue;
             const dt = phraseToMoment(p);
@@ -225,7 +239,7 @@ class DDSuggest extends obsidian_1.EditorSuggest {
            1. Find the canonical phrase that maps to this calendar date
         ----------------------------------------------------------------- */
         const targetDate = (0, obsidian_1.moment)(value, settings.dateFormat).format("YYYY-MM-DD");
-        const candidates = PHRASES.filter(p => p.startsWith(query.toLowerCase()) &&
+        const candidates = this.plugin.allPhrases().filter(p => p.startsWith(query.toLowerCase()) &&
             phraseToMoment(p)?.format("YYYY-MM-DD") === targetDate);
         let phrase = query.toLowerCase();
         let alias;
@@ -300,6 +314,9 @@ class DDSuggest extends obsidian_1.EditorSuggest {
  */
 class DynamicDates extends obsidian_1.Plugin {
     settings = DEFAULT_SETTINGS;
+    allPhrases() {
+        return [...PHRASES, ...Object.keys(this.settings.customDates || {}).map(p => p.toLowerCase())];
+    }
     async onload() {
         await this.loadSettings();
         this.registerEditorSuggest(new DDSuggest(this.app, this));
@@ -326,9 +343,13 @@ class DynamicDates extends obsidian_1.Plugin {
             if (!this.settings.dailyFolder)
                 this.settings.dailyFolder = daily.folder;
         }
+        if (!this.settings.customDates)
+            this.settings.customDates = {};
+        phraseToMoment.customDates = Object.fromEntries(Object.entries(this.settings.customDates).map(([k, v]) => [k.toLowerCase(), v]));
     }
     async saveSettings() {
         await this.saveData(this.settings);
+        phraseToMoment.customDates = Object.fromEntries(Object.entries(this.settings.customDates || {}).map(([k, v]) => [k.toLowerCase(), v]));
     }
     linkForPhrase(phrase) {
         const m = phraseToMoment(phrase);
@@ -350,7 +371,7 @@ class DynamicDates extends obsidian_1.Plugin {
         return `[[${linkPath}|${alias}]]`;
     }
     convertText(text) {
-        const phrases = [...PHRASES].sort((a, b) => b.length - a.length);
+        const phrases = [...this.allPhrases()].sort((a, b) => b.length - a.length);
         for (const p of phrases) {
             const esc = p.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
             const re = new RegExp(`\\b${esc}\\b`, "gi");
@@ -429,6 +450,18 @@ class DDSettingTab extends obsidian_1.PluginSettingTab {
             .setValue(this.plugin.settings.aliasFormat)
             .onChange(async (v) => {
             this.plugin.settings.aliasFormat = v.trim() || "capitalize";
+            await this.plugin.saveSettings();
+        }));
+        new obsidian_1.Setting(containerEl)
+            .setName("Custom dates (JSON)")
+            .addText((t) => t
+            .setPlaceholder('{"phrase":"MM-DD"}')
+            .setValue(JSON.stringify(this.plugin.settings.customDates))
+            .onChange(async (v) => {
+            try {
+                this.plugin.settings.customDates = JSON.parse(v || '{}');
+            }
+            catch { }
             await this.plugin.saveSettings();
         }));
     }
