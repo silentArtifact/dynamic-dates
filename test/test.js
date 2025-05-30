@@ -184,5 +184,51 @@
   const converted = inst.convertText('see you tomorrow');
   assert.strictEqual(converted, 'see you [[2024-05-09|May 9th]]');
 
+  /* ------------------------------------------------------------------ */
+  /* linkForPhrase variations                                           */
+  /* ------------------------------------------------------------------ */
+  const lf = new DynamicDates();
+  lf.settings = Object.assign({}, plugin.settings, { dailyFolder: 'Journal' });
+  assert.strictEqual(lf.linkForPhrase('tomorrow'), '[[Journal/2024-05-09|Tomorrow]]');
+  lf.settings.aliasFormat = 'keep';
+  assert.strictEqual(lf.linkForPhrase('tomorrow'), '[[Journal/2024-05-09|tomorrow]]');
+  lf.settings.aliasFormat = 'date';
+  assert.strictEqual(lf.linkForPhrase('tomorrow'), '[[Journal/2024-05-09|May 9th]]');
+  assert.strictEqual(lf.linkForPhrase('nonsense'), null);
+
+  /* ------------------------------------------------------------------ */
+  /* convertText edge cases                                             */
+  /* ------------------------------------------------------------------ */
+  lf.settings.dailyFolder = '';
+  const multi = lf.convertText('today and Tomorrow and next Monday');
+  assert.strictEqual(multi,
+    '[[2024-05-08|May 8th]] and [[2024-05-09|May 9th]] and [[2024-05-13|May 13th]]');
+  const noReplace = lf.convertText('see you tomorrowland');
+  assert.strictEqual(noReplace, 'see you tomorrowland');
+  const partial = lf.convertText('nottoday tomorrow');
+  assert.strictEqual(partial, 'nottoday [[2024-05-09|May 9th]]');
+
+  /* ------------------------------------------------------------------ */
+  /* onTrigger additional guard rails                                   */
+  /* ------------------------------------------------------------------ */
+  const tPlugin = { settings: Object.assign({}, plugin.settings, { autoCreate: false }) };
+  const tApp = { vault:{}, workspace:{} };
+  const tSugg = new DDSuggest(tApp, tPlugin);
+  assert.strictEqual(tSugg.onTrigger({line:0,ch:4}, { getLine:()=> 'next' }, null), null);
+  assert.ok(tSugg.onTrigger({line:0,ch:11}, { getLine:()=> 'next friday' }, null));
+
+  /* ------------------------------------------------------------------ */
+  /* getSuggestions and acceptKey behaviour                             */
+  /* ------------------------------------------------------------------ */
+  const suggs = tSugg.getSuggestions({ query: 'tom' });
+  assert.deepStrictEqual(Array.from(suggs), ['2024-05-09']);
+  tPlugin.settings.acceptKey = 'Enter';
+  const inserted2 = [];
+  tSugg.context = { editor: { replaceRange:(t)=>inserted2.push(t), getLine:()=>'' }, start:{line:0,ch:0}, end:{line:0,ch:3}, query:'tom' };
+  tSugg.selectSuggestion('2024-05-09', new KeyboardEvent({ key:'Tab', shiftKey:false }));
+  assert.strictEqual(inserted2.length, 0);
+  tSugg.selectSuggestion('2024-05-09', new KeyboardEvent({ key:'Enter', shiftKey:false }));
+  assert.strictEqual(inserted2.pop(), '[[Daily/2024-05-09|Tomorrow]]');
+
   console.log('All tests passed');
 })();
