@@ -271,8 +271,19 @@ class DDSuggest extends EditorSuggest<string> {
 
         /** Render a single entry in the suggestion dropdown. */
         renderSuggestion(value: string, el: HTMLElement) {
-                el.createDiv({ text: value });
-	}
+                let phrase = this.context?.query.toLowerCase() || "";
+                const target = moment(value, this.plugin.settings.dateFormat).format("YYYY-MM-DD");
+                const candidates = this.plugin
+                        .allPhrases()
+                        .filter((p) =>
+                                p.startsWith(phrase) &&
+                                phraseToMoment(p)?.format("YYYY-MM-DD") === target,
+                        );
+                if (candidates.length) {
+                        phrase = candidates.sort((a, b) => a.length - b.length)[0];
+                }
+                el.createDiv({ text: `${value} (${phrase})` });
+        }
 
         /**
          * Replace the typed phrase with the selected wikilink and optionally
