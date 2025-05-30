@@ -468,17 +468,27 @@ class DDSettingTab extends PluginSettingTab {
 		const { containerEl } = this;
 		containerEl.empty();
 
-		new Setting(containerEl)
-			.setName("Date format")
-			.addText((t) =>
-				t
-					.setPlaceholder("YYYY-MM-DD")
-					.setValue(this.plugin.settings.dateFormat)
+                new Setting(containerEl)
+                        .setName("Date format")
+                        .addDropdown((d: any) => {
+                                const formats: Record<string, string> = {
+                                        "YYYY-MM-DD": moment().format("YYYY-MM-DD"),
+                                        "DD-MM-YYYY": moment().format("DD-MM-YYYY"),
+                                        "MM-DD-YYYY": moment().format("MM-DD-YYYY"),
+                                        "YYYYMMDD": moment().format("YYYYMMDD"),
+                                };
+                                for (const fmt in formats) {
+                                        d.addOption(fmt, `${fmt} — ${formats[fmt]}`);
+                                }
+                                if (!(this.plugin.settings.dateFormat in formats)) {
+                                        d.addOption(this.plugin.settings.dateFormat, this.plugin.settings.dateFormat);
+                                }
+                                d.setValue(this.plugin.settings.dateFormat)
                                         .onChange(async (v: string) => {
-                                                this.plugin.settings.dateFormat = v.trim() || "YYYY-MM-DD";
+                                                this.plugin.settings.dateFormat = v;
                                                 await this.plugin.saveSettings();
-                                        }),
-			);
+                                        });
+                        });
 
 		new Setting(containerEl)
 			.setName("Daily-note folder")
@@ -517,16 +527,16 @@ class DDSettingTab extends PluginSettingTab {
 
                 new Setting(containerEl)
                         .setName("Accept key")
-                        .addText((t) =>
-                                t
-                                        .setPlaceholder("Tab")
-                                        .setValue(this.plugin.settings.acceptKey)
+                        .addDropdown((d: any) => {
+                                d.addOption("Tab", "Tab");
+                                d.addOption("Enter", "Enter");
+                                d.setValue(this.plugin.settings.acceptKey)
                                         .onChange(async (v: string) => {
-                                                const val = v.trim() === "Enter" ? "Enter" : "Tab";
+                                                const val = v === "Enter" ? "Enter" : "Tab";
                                                 this.plugin.settings.acceptKey = val as any;
                                                 await this.plugin.saveSettings();
-                                        }),
-                        );
+                                        });
+                        });
 
                 new Setting(containerEl)
                         .setName("Shift+<key> inserts plain link")
@@ -541,15 +551,20 @@ class DDSettingTab extends PluginSettingTab {
 
                 new Setting(containerEl)
                         .setName("Alias style")
-                        .addText((t) =>
-                                t
-                                        .setPlaceholder("capitalize")
-                                        .setValue(this.plugin.settings.aliasFormat)
+                        .addDropdown((d: any) => {
+                                d.addOption("capitalize", "Capitalize");
+                                d.addOption("keep", "Keep typed");
+                                d.addOption("date", "Formatted date");
+                                if (!["capitalize", "keep", "date"].includes(this.plugin.settings.aliasFormat)) {
+                                        d.addOption(this.plugin.settings.aliasFormat, this.plugin.settings.aliasFormat);
+                                }
+                                d.setValue(this.plugin.settings.aliasFormat)
                                         .onChange(async (v: string) => {
-                                                this.plugin.settings.aliasFormat = (v.trim() as any) || "capitalize";
+                                                const val = (v as any) || "capitalize";
+                                                this.plugin.settings.aliasFormat = val;
                                                 await this.plugin.saveSettings();
-                                        }),
-                        );
+                                        });
+                        });
 
                 new Setting(containerEl)
                         .setName("Custom dates (JSON)")
