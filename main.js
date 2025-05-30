@@ -7,7 +7,6 @@ const DEFAULT_SETTINGS = {
     autoCreate: false,
     keepAliasWithShift: true,
     aliasFormat: "capitalize",
-    template: "",
     openOnCreate: false,
 };
 /* ------------------------------------------------------------------ */
@@ -35,7 +34,6 @@ const WEEKDAYS = [
     "saturday",
 ];
 const PHRASES = BASE_WORDS.flatMap((w) => WEEKDAYS.includes(w) ? [w, `last ${w}`, `next ${w}`] : [w]);
-PHRASES.push("next month", "last month", "next year", "last year");
 /**
  * Convert a natural-language phrase into a moment date instance.
  *
@@ -65,14 +63,36 @@ function phraseToMoment(phrase) {
         if (!isNaN(n))
             return now.clone().subtract(n * (ago[2].startsWith('week') ? 7 : 1), "day");
     }
-    if (lower === "next month")
-        return now.clone().add(1, "month");
-    if (lower === "last month")
-        return now.clone().subtract(1, "month");
-    if (lower === "next year")
-        return now.clone().add(1, "year");
-    if (lower === "last year")
-        return now.clone().subtract(1, "year");
+    const lastMd = lower.match(/^last\s+(jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:tember)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)\s+(\d{1,2}\w*)$/i);
+    if (lastMd) {
+        let monthName = lastMd[1];
+        if (monthName.length <= 3) {
+            const idx = ["jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec"].indexOf(monthName.slice(0, 3));
+            monthName = ["january", "february", "march", "april", "may", "june", "july", "august", "september", "october", "november", "december"][idx];
+        }
+        const dayNum = parseInt(lastMd[2]);
+        if (!isNaN(dayNum)) {
+            const target = now.clone().month(monthName).date(dayNum);
+            if (!target.isValid())
+                return null;
+            if (!target.isBefore(now, "day"))
+                target.subtract(1, "year");
+            return target;
+        }
+    }
+    const justDay = lower.match(/^(?:the\s+)?(\d{1,2})(?:st|nd|rd|th)?$/);
+    if (justDay) {
+        const dayNum = parseInt(justDay[1]);
+        if (!isNaN(dayNum)) {
+            const target = now.clone();
+            if (dayNum <= target.date())
+                target.add(1, "month");
+            target.date(dayNum);
+            if (!target.isValid() || target.date() !== dayNum)
+                return null;
+            return target;
+        }
+    }
     const weekdays = WEEKDAYS;
     for (let i = 0; i < 7; i++) {
         const name = weekdays[i];
@@ -247,7 +267,14 @@ class DDSuggest extends obsidian_1.EditorSuggest {
                     !this.app.vault.getAbstractFileByPath(folder)) {
                     await this.app.vault.createFolder(folder);
                 }
-                await this.app.vault.create(target, settings.template || "");
+                let tpl = "";
+                const daily = this.app.internalPlugins?.plugins?.["daily-notes"]?.instance?.options;
+                if (daily?.template) {
+                    const f = this.app.vault.getAbstractFileByPath(daily.template);
+                    if (f)
+                        tpl = await this.app.vault.read(f);
+                }
+                await this.app.vault.create(target, tpl);
                 if (settings.openOnCreate && this.app.workspace?.openLinkText) {
                     this.app.workspace.openLinkText(target, "", false);
                 }
@@ -385,15 +412,6 @@ class DDSettingTab extends obsidian_1.PluginSettingTab {
             .setValue(this.plugin.settings.aliasFormat)
             .onChange(async (v) => {
             this.plugin.settings.aliasFormat = v.trim() || "capitalize";
-            await this.plugin.saveSettings();
-        }));
-        new obsidian_1.Setting(containerEl)
-            .setName("Template for new notes")
-            .addText((t) => t
-            .setPlaceholder("")
-            .setValue(this.plugin.settings.template)
-            .onChange(async (v) => {
-            this.plugin.settings.template = v;
             await this.plugin.saveSettings();
         }));
     }

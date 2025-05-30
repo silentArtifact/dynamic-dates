@@ -37,7 +37,7 @@
     }
     weekday() { return this.d.getDay(); }
     month(name) { this.d.setMonth(MONTHS[name.toLowerCase()]); return this; }
-    date(n) { this._setDay = n; this.d.setDate(n); return this; }
+    date(n) { if (n == null) return this.d.getDate(); this._setDay = n; this.d.setDate(n); return this; }
     isValid() { return !isNaN(this.d) && (this._setDay == null || this.d.getDate() === this._setDay); }
     isBefore(other, unit) {
       if (unit === 'day') {
@@ -101,14 +101,14 @@
   assert.strictEqual(phraseToMoment('february 30'), null);
   assert.strictEqual(fmt(phraseToMoment('in 3 days')), '2024-05-11');
   assert.strictEqual(fmt(phraseToMoment('3 days ago')), '2024-05-05');
-  assert.strictEqual(fmt(phraseToMoment('next month')), '2024-06-08');
-  assert.strictEqual(fmt(phraseToMoment('last month')), '2024-04-08');
   assert.strictEqual(fmt(phraseToMoment('jan 1')), '2025-01-01');
+  assert.strictEqual(fmt(phraseToMoment('last may 1')), '2024-05-01');
+  assert.strictEqual(fmt(phraseToMoment('the 24th')), '2024-05-24');
 
   /* ------------------------------------------------------------------ */
   /* onTrigger guard rails                                             */
   /* ------------------------------------------------------------------ */
-  const plugin = { settings: { dateFormat: 'YYYY-MM-DD', dailyFolder: '', autoCreate: false, keepAliasWithShift: true, aliasFormat:'capitalize', template:'', openOnCreate:false } };
+  const plugin = { settings: { dateFormat: 'YYYY-MM-DD', dailyFolder: '', autoCreate: false, keepAliasWithShift: true, aliasFormat:'capitalize', openOnCreate:false } };
   const app = { vault: {} };
   const sugg = new DDSuggest(app, plugin);
 
@@ -145,14 +145,19 @@
   /* ------------------------------------------------------------------ */
   plugin.settings.autoCreate = true;
   plugin.settings.dailyFolder = 'Daily';
-  plugin.settings.template = '# hello';
   plugin.settings.openOnCreate = true;
   const calls = [];
   app.vault = {
-    getAbstractFileByPath: (p) => { calls.push(['check', p]); return null; },
+    getAbstractFileByPath: (p) => {
+      calls.push(['check', p]);
+      if (p === 'tpl.md') return { path: p };
+      return null;
+    },
+    read: (f) => { calls.push(['read', f.path]); return '# hello'; },
     createFolder: (p) => { calls.push(['mkdir', p]); return { then: r => r() }; },
     create: (p, d) => { calls.push(['create', p, d]); return { then: r => r() }; },
   };
+  app.internalPlugins = { plugins: { 'daily-notes': { instance: { options: { template: 'tpl.md' } } } } };
   app.workspace = { openLinkText:(p)=>calls.push(['open', p]) };
   const ed2 = { getLine:()=>'', replaceRange:(t)=>calls.push(['insert', t]) };
   sugg.app = app;
@@ -165,6 +170,8 @@
     ['check', 'Daily/2024-05-09.md'],
     ['check', 'Daily'],
     ['mkdir', 'Daily'],
+    ['check', 'tpl.md'],
+    ['read', 'tpl.md'],
     ['create', 'Daily/2024-05-09.md', '# hello'],
     ['open', 'Daily/2024-05-09.md'],
   ]);
