@@ -1,0 +1,11 @@
+{
+  "id": "dynamic-dates",
+  "name": "Dynamic Dates",
+  "version": "0.0.1",
+  "main": "main.js",
+  "minAppVersion": "1.5.0",
+  "description": "Type natural-language dates (today, next Friday…) and auto-link them to your daily notes.",
+  "author": "Your Name",
+  "authorUrl": "",
+  "isDesktopOnly": false
+}
