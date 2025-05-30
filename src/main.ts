@@ -61,6 +61,14 @@ const PHRASES = BASE_WORDS.flatMap((w) =>
         WEEKDAYS.includes(w) ? [w, `last ${w}`, `next ${w}`] : [w],
 );
 
+/**
+ * Convert a natural-language phrase into a moment date instance.
+ *
+ * Supported values include "today", "tomorrow", "yesterday",
+ * "next Monday", "last Friday" and long month names such as
+ * "december 25" or "august 20th".  Abbreviated month names are not
+ * recognised.  If the phrase cannot be parsed, `null` is returned.
+ */
 function phraseToMoment(phrase: string): moment.Moment | null {
         const now = moment();
         const lower = phrase.toLowerCase().trim();
@@ -107,21 +115,31 @@ function phraseToMoment(phrase: string): moment.Moment | null {
 /* Suggest box                                                        */
 /* ------------------------------------------------------------------ */
 
+/**
+ * Suggest box that proposes dates as the user types natural
+ * language expressions.  Selecting a suggestion will replace the
+ * typed phrase with a wikilink to the appropriate daily note.
+ */
 class DDSuggest extends EditorSuggest<string> {
-	plugin: DynamicDates;
-	constructor(app: App, plugin: DynamicDates) {
-		super(app);
-		this.plugin = plugin;
-	}
+        plugin: DynamicDates;
+        constructor(app: App, plugin: DynamicDates) {
+                super(app);
+                this.plugin = plugin;
+        }
 
-	onTrigger(
-		cursor: EditorPosition,
-		editor: Editor,
-		_file: TFile,
-	): EditorSuggestTriggerInfo | null {
-		const lineBefore = editor.getLine(cursor.line).slice(0, cursor.ch);
+        /**
+         * Decide whether a suggestion popup should appear for the word at the
+         * current cursor position.
+         */
+        onTrigger(
+                cursor: EditorPosition,
+                editor: Editor,
+                _file: TFile,
+        ): EditorSuggestTriggerInfo | null {
+                const lineBefore = editor.getLine(cursor.line).slice(0, cursor.ch);
 
-		/* split into tokens and consider last two */
+                // Split the text before the cursor and inspect the last two
+                // tokens so that phrases like "next friday" are handled.
                 const tokens = lineBefore.split(/\s+/).filter((t) => t.length);
                 if (tokens.length === 0) return null;
 
@@ -147,9 +165,9 @@ class DDSuggest extends EditorSuggest<string> {
 		/* -----------------------------------------------------------
 		   Guard-rails
 		   ----------------------------------------------------------- */
-		// never pop on bare/partial “last” / “next”
-		if (["l","la","las","last","n","ne","nex","next"].includes(query))
-			return null;
+                // never pop on bare/partial "last" / "next"
+                if (["l","la","las","last","n","ne","nex","next"].includes(query))
+                        return null;
 
 		// for stand-alone phrases (no qualifier) require ≥3 chars
 		if (!hasQualifier && query.length < 3) return null;
@@ -164,8 +182,12 @@ class DDSuggest extends EditorSuggest<string> {
                 };
 	}
 
-	getSuggestions(ctx: EditorSuggestContext): string[] {
-		const q = ctx.query;
+        /**
+         * Build the list of suggestion strings that should be shown for the
+         * given query.
+         */
+        getSuggestions(ctx: EditorSuggestContext): string[] {
+                const q = ctx.query;
 
                 const direct = phraseToMoment(q);
                 if (direct) {
@@ -181,13 +203,18 @@ class DDSuggest extends EditorSuggest<string> {
                 return [...uniq];
         }
 
-	renderSuggestion(value: string, el: HTMLElement) {
-		el.createDiv({ text: value });
+        /** Render a single entry in the suggestion dropdown. */
+        renderSuggestion(value: string, el: HTMLElement) {
+                el.createDiv({ text: value });
 	}
 
-	selectSuggestion(value: string, ev: KeyboardEvent | MouseEvent) {
-		const { editor, start, end, query } = this.context!;
-		const { settings } = this.plugin;
+        /**
+         * Replace the typed phrase with the selected wikilink and optionally
+         * create the daily note on disk.
+         */
+        selectSuggestion(value: string, ev: KeyboardEvent | MouseEvent) {
+                const { editor, start, end, query } = this.context!;
+                const { settings } = this.plugin;
 	
 		/* ----------------------------------------------------------------
 		   1. Find the canonical phrase that maps to this calendar date
@@ -260,6 +287,11 @@ class DDSuggest extends EditorSuggest<string> {
 /* Main plugin & settings                                             */
 /* ------------------------------------------------------------------ */
 
+/**
+ * Main plugin class.  Registers the suggestion box and exposes a
+ * settings tab so users can customise how dates are formatted and
+ * where daily notes are stored.
+ */
 export default class DynamicDates extends Plugin {
         settings: DDSettings = DEFAULT_SETTINGS;
 
@@ -282,8 +314,9 @@ export default class DynamicDates extends Plugin {
 	}
 }
 
+/** UI for the plugin settings displayed in Obsidian's settings pane. */
 class DDSettingTab extends PluginSettingTab {
-	plugin: DynamicDates;
+        plugin: DynamicDates;
 	constructor(app: App, plugin: DynamicDates) {
 		super(app, plugin);
 		this.plugin = plugin;
