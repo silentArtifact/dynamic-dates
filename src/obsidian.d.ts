@@ -8,12 +8,17 @@ declare module "obsidian" {
         create(path: string, data: string): Promise<void>;
     }
 
-    export class App { vault: Vault; }
+    export class Workspace {
+        openLinkText(path: string, source: string, newLeaf: boolean): void;
+    }
+
+    export class App { vault: Vault; workspace: Workspace; internalPlugins: any; }
 
     export class Plugin {
         app: App;
         registerEditorSuggest(s: EditorSuggest<any>): void;
         addSettingTab(tab: PluginSettingTab): void;
+        addCommand(cmd: any): void;
         loadData(): Promise<any>;
         saveData(data: any): Promise<void>;
     }
@@ -21,6 +26,8 @@ declare module "obsidian" {
     export class Editor {
         getLine(line: number): string;
         replaceRange(text: string, from: any, to: any): void;
+        getValue(): string;
+        setValue(v: string): void;
     }
 
     export interface EditorPosition { line: number; ch: number; }
