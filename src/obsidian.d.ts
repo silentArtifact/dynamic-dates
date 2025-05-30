@@ -53,7 +53,6 @@ declare module "obsidian" {
         setName(name: string): this;
         addText(cb: (t: any) => any): this;
         addToggle(cb: (t: any) => any): this;
-        addDropdown(cb: (d: any) => any): this;
     }
 
     export interface TFile {}
