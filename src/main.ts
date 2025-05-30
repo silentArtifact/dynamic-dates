@@ -18,7 +18,6 @@ import {
 
 interface DDSettings {
         dateFormat: string;
-        dailyFolder: string;
         autoCreate: boolean;
         acceptKey: "Enter" | "Tab";
         noAliasWithShift: boolean;
@@ -29,7 +28,6 @@ interface DDSettings {
 
 const DEFAULT_SETTINGS: DDSettings = {
         dateFormat: "YYYY-MM-DD",
-        dailyFolder: "",
         autoCreate: false,
         acceptKey: "Tab",
         noAliasWithShift: false,
@@ -322,8 +320,8 @@ class DDSuggest extends EditorSuggest<string> {
 		/* ----------------------------------------------------------------
 		   2. Build the wikilink with alias
 		----------------------------------------------------------------- */
-                const linkPath =
-                        (settings.dailyFolder ? settings.dailyFolder + "/" : "") + value;
+                const folder = this.plugin.getDailyFolder();
+                const linkPath = (folder ? folder + "/" : "") + value;
                 const link = `[[${linkPath}|${alias}]]`;
 	
 		/* ----------------------------------------------------------------
@@ -352,7 +350,7 @@ class DDSuggest extends EditorSuggest<string> {
                         !this.app.vault.getAbstractFileByPath(linkPath + ".md")
                 ) {
                         const target = linkPath + ".md";
-                        const folder = settings.dailyFolder.trim();
+                        const folder = this.plugin.getDailyFolder().trim();
                         (async () => {
                                 if (
                                         folder &&
@@ -391,6 +389,11 @@ class DDSuggest extends EditorSuggest<string> {
 export default class DynamicDates extends Plugin {
         settings: DDSettings = DEFAULT_SETTINGS;
 
+        getDailyFolder(): string {
+                const daily = (this.app as any).internalPlugins?.plugins?.["daily-notes"]?.instance?.options;
+                return daily?.folder || "";
+        }
+
         allPhrases(): string[] {
                 return [...PHRASES, ...Object.keys(this.settings.customDates || {}).map(p => p.toLowerCase())];
         }
@@ -417,10 +420,7 @@ export default class DynamicDates extends Plugin {
         async loadSettings() {
                 this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
                 const daily = (this.app as any).internalPlugins?.plugins?.["daily-notes"]?.instance?.options;
-                if (daily) {
-                        if (!this.settings.dateFormat) this.settings.dateFormat = daily.format;
-                        if (!this.settings.dailyFolder) this.settings.dailyFolder = daily.folder;
-                }
+                if (daily && !this.settings.dateFormat) this.settings.dateFormat = daily.format;
                 if (!this.settings.customDates) this.settings.customDates = {};
                 (phraseToMoment as any).customDates = Object.fromEntries(Object.entries(this.settings.customDates).map(([k,v]) => [k.toLowerCase(), v]));
         }
@@ -442,7 +442,8 @@ export default class DynamicDates extends Plugin {
                 } else {
                         alias = phrase.replace(/\b\w/g, ch => ch.toUpperCase());
                 }
-                const linkPath = (this.settings.dailyFolder ? this.settings.dailyFolder + "/" : "") + value;
+                const folder = this.getDailyFolder();
+                const linkPath = (folder ? folder + "/" : "") + value;
                 return `[[${linkPath}|${alias}]]`;
         }
 
@@ -486,17 +487,6 @@ class DDSettingTab extends PluginSettingTab {
                                         }),
                         );
 
-		new Setting(containerEl)
-			.setName("Daily-note folder")
-			.addText((t) =>
-				t
-					.setPlaceholder("Daily")
-					.setValue(this.plugin.settings.dailyFolder)
-                                        .onChange(async (v: string) => {
-                                                this.plugin.settings.dailyFolder = v.trim();
-                                                await this.plugin.saveSettings();
-                                        }),
-			);
 
                 new Setting(containerEl)
                         .setName("Create note if missing")
