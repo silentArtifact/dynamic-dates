@@ -72,6 +72,8 @@
     addText(){ return this; }
     addToggle(){ return this; }
     addDropdown(){ return this; }
+    addButton(){ return this; }
+    addExtraButton(){ return this; }
   }
 
   const WEEKDAYS = ['sunday','monday','tuesday','wednesday','thursday','friday','saturday'];
@@ -260,6 +262,21 @@
   tSugg.selectSuggestion('2024-05-09', ev2);
   assert.ok(called2);
   assert.strictEqual(inserted2.pop(), '[[Daily/2024-05-09]]');
+
+  /* ------------------------------------------------------------------ */
+  /* load and save custom dates                                         */
+  /* ------------------------------------------------------------------ */
+  const lsPlugin = new DynamicDates();
+  let saved = null;
+  lsPlugin.loadData = async () => ({ customDates: { 'Mid Year': '06-01' } });
+  lsPlugin.saveData = async (d) => { saved = d; };
+  await lsPlugin.loadSettings();
+  assert.ok(lsPlugin.allPhrases().includes('mid year'));
+  assert.strictEqual(fmt(phraseToMoment('mid year')), '2024-06-01');
+  lsPlugin.settings.customDates['Quarter End'] = '09-30';
+  await lsPlugin.saveSettings();
+  assert.strictEqual(saved.customDates['Quarter End'], '09-30');
+  assert.strictEqual(fmt(phraseToMoment('quarter end')), '2024-09-30');
 
   /* ------------------------------------------------------------------ */
   /* custom dates feature                                               */

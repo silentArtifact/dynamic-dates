@@ -493,6 +493,40 @@ class DDSettingTab extends obsidian_1.PluginSettingTab {
             this.plugin.settings.aliasFormat = v;
             await this.plugin.saveSettings();
         }));
+        containerEl.createDiv({ text: "Custom date mappings" });
+        Object.entries(this.plugin.settings.customDates).forEach(([p, d]) => {
+            let phrase = p;
+            let date = d;
+            new obsidian_1.Setting(containerEl)
+                .addText(t => t.setPlaceholder("Phrase")
+                .setValue(phrase)
+                .onChange(async (v) => {
+                const map = { ...this.plugin.settings.customDates };
+                delete map[phrase];
+                phrase = v;
+                map[phrase] = date;
+                this.plugin.settings.customDates = map;
+                await this.plugin.saveSettings();
+            }))
+                .addText(t => t.setPlaceholder("MM-DD")
+                .setValue(date)
+                .onChange(async (v) => {
+                date = v;
+                this.plugin.settings.customDates[phrase] = v;
+                await this.plugin.saveSettings();
+            }))
+                .addExtraButton(b => b.onClick(async () => {
+                delete this.plugin.settings.customDates[phrase];
+                await this.plugin.saveSettings();
+                this.display();
+            }));
+        });
+        new obsidian_1.Setting(containerEl)
+            .addButton(b => b.setButtonText("Add")
+            .onClick(() => {
+            this.plugin.settings.customDates["New phrase"] = "01-01";
+            this.display();
+        }));
         new obsidian_1.Setting(containerEl)
             .setName("Custom dates (JSON)")
             .addText((t) => t
