@@ -20,7 +20,8 @@ interface DDSettings {
         dateFormat: string;
         dailyFolder: string;
         autoCreate: boolean;
-        keepAliasWithShift: boolean;
+        acceptKey: "Enter" | "Tab";
+        noAliasWithShift: boolean;
         aliasFormat: "capitalize" | "keep" | "date";
         openOnCreate: boolean;
 }
@@ -29,7 +30,8 @@ const DEFAULT_SETTINGS: DDSettings = {
         dateFormat: "YYYY-MM-DD",
         dailyFolder: "",
         autoCreate: false,
-        keepAliasWithShift: true,
+        acceptKey: "Tab",
+        noAliasWithShift: false,
         aliasFormat: "capitalize",
         openOnCreate: false,
 };
@@ -293,23 +295,27 @@ class DDSuggest extends EditorSuggest<string> {
 		/* ----------------------------------------------------------------
 		   2. Build the wikilink with alias
 		----------------------------------------------------------------- */
-		const linkPath =
-			(settings.dailyFolder ? settings.dailyFolder + "/" : "") + value;
-		const link = `[[${linkPath}|${alias}]]`;
+                const linkPath =
+                        (settings.dailyFolder ? settings.dailyFolder + "/" : "") + value;
+                const link = `[[${linkPath}|${alias}]]`;
 	
 		/* ----------------------------------------------------------------
 		   3. Insert, respecting the Shift-modifier behaviour
 		----------------------------------------------------------------- */
-		const keepTypedWords =
-			settings.keepAliasWithShift &&
-			ev instanceof KeyboardEvent &&
-			ev.shiftKey;
-	
-		editor.replaceRange(
-			keepTypedWords ? `${query} ${link}` : link,
-			start,
-			end,
-		);
+                let final = link;
+                if (ev instanceof KeyboardEvent) {
+                        const key = ev.key === "Enter" ? "Enter" : ev.key === "Tab" ? "Tab" : "";
+                        if (key && key !== settings.acceptKey) return;
+                        if (ev.shiftKey && settings.noAliasWithShift) {
+                                final = `[[${linkPath}]]`;
+                        }
+                }
+
+                editor.replaceRange(
+                        final,
+                        start,
+                        end,
+                );
 	
 		/* ----------------------------------------------------------------
 		   4. Optional auto-create note
@@ -474,13 +480,27 @@ class DDSettingTab extends PluginSettingTab {
                                         }),
                         );
 
+
                 new Setting(containerEl)
-                        .setName("Shift+Tab keeps alias")
+                        .setName("Accept key")
+                        .addText((t) =>
+                                t
+                                        .setPlaceholder("Tab")
+                                        .setValue(this.plugin.settings.acceptKey)
+                                        .onChange(async (v: string) => {
+                                                const val = v.trim() === "Enter" ? "Enter" : "Tab";
+                                                this.plugin.settings.acceptKey = val as any;
+                                                await this.plugin.saveSettings();
+                                        }),
+                        );
+
+                new Setting(containerEl)
+                        .setName("Shift+<key> inserts plain link")
                         .addToggle((t) =>
                                 t
-                                        .setValue(this.plugin.settings.keepAliasWithShift)
+                                        .setValue(this.plugin.settings.noAliasWithShift)
                                         .onChange(async (v: boolean) => {
-                                                this.plugin.settings.keepAliasWithShift = v;
+                                                this.plugin.settings.noAliasWithShift = v;
                                                 await this.plugin.saveSettings();
                                         }),
                         );
