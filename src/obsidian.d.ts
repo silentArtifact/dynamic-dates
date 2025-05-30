@@ -55,6 +55,15 @@ declare module "obsidian" {
         addText(cb: (t: any) => any): this;
         addToggle(cb: (t: any) => any): this;
         addDropdown(cb: (d: any) => any): this;
+        addButton(cb: (b: any) => any): this;
+        addExtraButton(cb: (b: any) => any): this;
+    }
+
+    export class ButtonComponent {
+        setButtonText(text: string): this;
+        setTooltip(text: string): this;
+        setIcon(icon: string): this;
+        onClick(callback: (evt?: any) => any): this;
     }
 
     export interface TFile {}
