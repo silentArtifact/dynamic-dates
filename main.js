@@ -402,13 +402,25 @@ class DDSettingTab extends obsidian_1.PluginSettingTab {
         containerEl.empty();
         new obsidian_1.Setting(containerEl)
             .setName("Date format")
-            .addText((t) => t
-            .setPlaceholder("YYYY-MM-DD")
-            .setValue(this.plugin.settings.dateFormat)
-            .onChange(async (v) => {
-            this.plugin.settings.dateFormat = v.trim() || "YYYY-MM-DD";
-            await this.plugin.saveSettings();
-        }));
+            .addDropdown((d) => {
+            const formats = {
+                "YYYY-MM-DD": (0, obsidian_1.moment)().format("YYYY-MM-DD"),
+                "DD-MM-YYYY": (0, obsidian_1.moment)().format("DD-MM-YYYY"),
+                "MM-DD-YYYY": (0, obsidian_1.moment)().format("MM-DD-YYYY"),
+                "YYYYMMDD": (0, obsidian_1.moment)().format("YYYYMMDD"),
+            };
+            for (const fmt in formats) {
+                d.addOption(fmt, `${fmt} — ${formats[fmt]}`);
+            }
+            if (!(this.plugin.settings.dateFormat in formats)) {
+                d.addOption(this.plugin.settings.dateFormat, this.plugin.settings.dateFormat);
+            }
+            d.setValue(this.plugin.settings.dateFormat)
+                .onChange(async (v) => {
+                this.plugin.settings.dateFormat = v;
+                await this.plugin.saveSettings();
+            });
+        });
         new obsidian_1.Setting(containerEl)
             .setName("Daily-note folder")
             .addText((t) => t
@@ -436,14 +448,16 @@ class DDSettingTab extends obsidian_1.PluginSettingTab {
         }));
         new obsidian_1.Setting(containerEl)
             .setName("Accept key")
-            .addText((t) => t
-            .setPlaceholder("Tab")
-            .setValue(this.plugin.settings.acceptKey)
-            .onChange(async (v) => {
-            const val = v.trim() === "Enter" ? "Enter" : "Tab";
-            this.plugin.settings.acceptKey = val;
-            await this.plugin.saveSettings();
-        }));
+            .addDropdown((d) => {
+            d.addOption("Tab", "Tab");
+            d.addOption("Enter", "Enter");
+            d.setValue(this.plugin.settings.acceptKey)
+                .onChange(async (v) => {
+                const val = v === "Enter" ? "Enter" : "Tab";
+                this.plugin.settings.acceptKey = val;
+                await this.plugin.saveSettings();
+            });
+        });
         new obsidian_1.Setting(containerEl)
             .setName("Shift+<key> inserts plain link")
             .addToggle((t) => t
@@ -454,13 +468,20 @@ class DDSettingTab extends obsidian_1.PluginSettingTab {
         }));
         new obsidian_1.Setting(containerEl)
             .setName("Alias style")
-            .addText((t) => t
-            .setPlaceholder("capitalize")
-            .setValue(this.plugin.settings.aliasFormat)
-            .onChange(async (v) => {
-            this.plugin.settings.aliasFormat = v.trim() || "capitalize";
-            await this.plugin.saveSettings();
-        }));
+            .addDropdown((d) => {
+            d.addOption("capitalize", "Capitalize");
+            d.addOption("keep", "Keep typed");
+            d.addOption("date", "Formatted date");
+            if (!["capitalize", "keep", "date"].includes(this.plugin.settings.aliasFormat)) {
+                d.addOption(this.plugin.settings.aliasFormat, this.plugin.settings.aliasFormat);
+            }
+            d.setValue(this.plugin.settings.aliasFormat)
+                .onChange(async (v) => {
+                const val = v || "capitalize";
+                this.plugin.settings.aliasFormat = val;
+                await this.plugin.saveSettings();
+            });
+        });
         new obsidian_1.Setting(containerEl)
             .setName("Custom dates (JSON)")
             .addText((t) => t

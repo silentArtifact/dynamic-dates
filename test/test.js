@@ -50,6 +50,17 @@
     }
     format(fmt) {
       if (fmt === 'YYYY-MM-DD') return this.d.toISOString().slice(0,10);
+      if (fmt === 'YYYYMMDD') {
+        return this.d.toISOString().slice(0,10).replace(/-/g, '');
+      }
+      if (fmt === 'DD-MM-YYYY') {
+        const iso = this.d.toISOString().slice(0,10).split('-');
+        return `${iso[2]}-${iso[1]}-${iso[0]}`;
+      }
+      if (fmt === 'MM-DD-YYYY') {
+        const iso = this.d.toISOString().slice(0,10).split('-');
+        return `${iso[1]}-${iso[2]}-${iso[0]}`;
+      }
       if (fmt === 'MMMM Do') {
         const months = ['January','February','March','April','May','June','July','August','September','October','November','December'];
         const day = this.d.getDate();
@@ -66,7 +77,7 @@
   class KeyboardEvent { constructor(init) { Object.assign(this, init); } }
   class Plugin { constructor() { this.app = { vault:{}, workspace:{} }; } }
   class PluginSettingTab {}
-  class Setting { setName(){return this;} addText(){return this;} addToggle(){return this;} }
+  class Setting { setName(){return this;} addText(){return this;} addToggle(){return this;} addDropdown(){return this;} }
 
   const WEEKDAYS = ['sunday','monday','tuesday','wednesday','thursday','friday','saturday'];
   const BASE_WORDS = ['today','yesterday','tomorrow', ...WEEKDAYS];
@@ -208,6 +219,16 @@
   assert.strictEqual(noReplace, 'see you tomorrowland');
   const partial = lf.convertText('nottoday tomorrow');
   assert.strictEqual(partial, 'nottoday [[2024-05-09|May 9th]]');
+
+  /* ------------------------------------------------------------------ */
+  /* dateFormat variations                                              */
+  /* ------------------------------------------------------------------ */
+  const df = new DynamicDates();
+  df.settings = Object.assign({}, plugin.settings, { dailyFolder: 'Logs', dateFormat: 'YYYYMMDD' });
+  assert.strictEqual(df.linkForPhrase('tomorrow'), '[[Logs/20240509|Tomorrow]]');
+  df.settings.dateFormat = 'DD-MM-YYYY';
+  df.settings.aliasFormat = 'keep';
+  assert.strictEqual(df.linkForPhrase('tomorrow'), '[[Logs/09-05-2024|tomorrow]]');
 
   /* ------------------------------------------------------------------ */
   /* onTrigger additional guard rails                                   */
