@@ -35,19 +35,31 @@ const DEFAULT_SETTINGS: DDSettings = {
 /* ------------------------------------------------------------------ */
 
 const BASE_WORDS = [
-	"today",
-	"yesterday",
-	"tomorrow",
-	"monday",
-	"tuesday",
-	"wednesday",
-	"thursday",
-	"friday",
-	"saturday",
-	"sunday",
+        "today",
+        "yesterday",
+        "tomorrow",
+        "monday",
+        "tuesday",
+        "wednesday",
+        "thursday",
+        "friday",
+        "saturday",
+        "sunday",
 ];
 
-const PHRASES = BASE_WORDS.flatMap((w) => [w, `last ${w}`, `next ${w}`]);
+const WEEKDAYS = [
+        "sunday",
+        "monday",
+        "tuesday",
+        "wednesday",
+        "thursday",
+        "friday",
+        "saturday",
+];
+
+const PHRASES = BASE_WORDS.flatMap((w) =>
+        WEEKDAYS.includes(w) ? [w, `last ${w}`, `next ${w}`] : [w],
+);
 
 function phraseToMoment(phrase: string): moment.Moment | null {
         const now = moment();
@@ -57,15 +69,7 @@ function phraseToMoment(phrase: string): moment.Moment | null {
 	if (lower === "yesterday") return now.clone().subtract(1, "day");
 	if (lower === "tomorrow") return now.clone().add(1, "day");
 
-	const weekdays = [
-		"sunday",
-		"monday",
-		"tuesday",
-		"wednesday",
-		"thursday",
-		"friday",
-		"saturday",
-	];
+        const weekdays = WEEKDAYS;
 
         for (let i = 0; i < 7; i++) {
                 const name = weekdays[i];
@@ -257,7 +261,7 @@ class DDSuggest extends EditorSuggest<string> {
 /* ------------------------------------------------------------------ */
 
 export default class DynamicDates extends Plugin {
-	settings: DDSettings;
+        settings: DDSettings = DEFAULT_SETTINGS;
 
 	async onload() {
 		await this.loadSettings();
@@ -294,10 +298,10 @@ class DDSettingTab extends PluginSettingTab {
 				t
 					.setPlaceholder("YYYY-MM-DD")
 					.setValue(this.plugin.settings.dateFormat)
-					.onChange(async (v) => {
-						this.plugin.settings.dateFormat = v.trim() || "YYYY-MM-DD";
-						await this.plugin.saveSettings();
-					}),
+                                        .onChange(async (v: string) => {
+                                                this.plugin.settings.dateFormat = v.trim() || "YYYY-MM-DD";
+                                                await this.plugin.saveSettings();
+                                        }),
 			);
 
 		new Setting(containerEl)
@@ -306,10 +310,10 @@ class DDSettingTab extends PluginSettingTab {
 				t
 					.setPlaceholder("Daily")
 					.setValue(this.plugin.settings.dailyFolder)
-					.onChange(async (v) => {
-						this.plugin.settings.dailyFolder = v.trim();
-						await this.plugin.saveSettings();
-					}),
+                                        .onChange(async (v: string) => {
+                                                this.plugin.settings.dailyFolder = v.trim();
+                                                await this.plugin.saveSettings();
+                                        }),
 			);
 
 		new Setting(containerEl)
@@ -317,10 +321,10 @@ class DDSettingTab extends PluginSettingTab {
 			.addToggle((t) =>
 				t
 					.setValue(this.plugin.settings.autoCreate)
-					.onChange(async (v) => {
-						this.plugin.settings.autoCreate = v;
-						await this.plugin.saveSettings();
-					}),
+                                        .onChange(async (v: boolean) => {
+                                                this.plugin.settings.autoCreate = v;
+                                                await this.plugin.saveSettings();
+                                        }),
 			);
 
 		new Setting(containerEl)
@@ -328,10 +332,10 @@ class DDSettingTab extends PluginSettingTab {
 			.addToggle((t) =>
 				t
 					.setValue(this.plugin.settings.keepAliasWithShift)
-					.onChange(async (v) => {
-						this.plugin.settings.keepAliasWithShift = v;
-						await this.plugin.saveSettings();
-					}),
+                                        .onChange(async (v: boolean) => {
+                                                this.plugin.settings.keepAliasWithShift = v;
+                                                await this.plugin.saveSettings();
+                                        }),
 			);
 	}
 }
