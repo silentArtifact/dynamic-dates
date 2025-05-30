@@ -66,7 +66,13 @@
   class KeyboardEvent { constructor(init) { Object.assign(this, init); } }
   class Plugin { constructor() { this.app = { vault:{}, workspace:{} }; } }
   class PluginSettingTab {}
-  class Setting { setName(){return this;} addText(){return this;} addToggle(){return this;} }
+  class Setting {
+    setName(){ return this; }
+    setDesc(){ return this; }
+    addText(){ return this; }
+    addToggle(){ return this; }
+    addDropdown(){ return this; }
+  }
 
   const WEEKDAYS = ['sunday','monday','tuesday','wednesday','thursday','friday','saturday'];
   const BASE_WORDS = ['today','yesterday','tomorrow', ...WEEKDAYS];

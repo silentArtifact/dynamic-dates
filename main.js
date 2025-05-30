@@ -402,11 +402,17 @@ class DDSettingTab extends obsidian_1.PluginSettingTab {
         containerEl.empty();
         new obsidian_1.Setting(containerEl)
             .setName("Date format")
-            .addText((t) => t
-            .setPlaceholder("YYYY-MM-DD")
+            .setDesc("Format used when inserting dates")
+            .addDropdown((d) => d
+            .addOptions({
+            "YYYY-MM-DD": "YYYY-MM-DD",
+            "DD-MM-YYYY": "DD-MM-YYYY",
+            "MM-DD-YYYY": "MM-DD-YYYY",
+            "YYYY/MM/DD": "YYYY/MM/DD",
+        })
             .setValue(this.plugin.settings.dateFormat)
             .onChange(async (v) => {
-            this.plugin.settings.dateFormat = v.trim() || "YYYY-MM-DD";
+            this.plugin.settings.dateFormat = v;
             await this.plugin.saveSettings();
         }));
         new obsidian_1.Setting(containerEl)
@@ -436,12 +442,12 @@ class DDSettingTab extends obsidian_1.PluginSettingTab {
         }));
         new obsidian_1.Setting(containerEl)
             .setName("Accept key")
-            .addText((t) => t
-            .setPlaceholder("Tab")
+            .setDesc("Key used to accept a suggestion")
+            .addDropdown((d) => d
+            .addOptions({ Tab: "Tab", Enter: "Enter" })
             .setValue(this.plugin.settings.acceptKey)
             .onChange(async (v) => {
-            const val = v.trim() === "Enter" ? "Enter" : "Tab";
-            this.plugin.settings.acceptKey = val;
+            this.plugin.settings.acceptKey = v;
             await this.plugin.saveSettings();
         }));
         new obsidian_1.Setting(containerEl)
@@ -454,11 +460,16 @@ class DDSettingTab extends obsidian_1.PluginSettingTab {
         }));
         new obsidian_1.Setting(containerEl)
             .setName("Alias style")
-            .addText((t) => t
-            .setPlaceholder("capitalize")
+            .setDesc("How the alias part of links is formatted")
+            .addDropdown((d) => d
+            .addOptions({
+            capitalize: "Capitalize phrase",
+            keep: "Keep typed text",
+            date: "Format as date",
+        })
             .setValue(this.plugin.settings.aliasFormat)
             .onChange(async (v) => {
-            this.plugin.settings.aliasFormat = v.trim() || "capitalize";
+            this.plugin.settings.aliasFormat = v;
             await this.plugin.saveSettings();
         }));
         new obsidian_1.Setting(containerEl)
