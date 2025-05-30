@@ -72,6 +72,8 @@
     addText(){ return this; }
     addToggle(){ return this; }
     addDropdown(){ return this; }
+    addButton(){ return this; }
+    addExtraButton(){ return this; }
   }
 
   const WEEKDAYS = ['sunday','monday','tuesday','wednesday','thursday','friday','saturday'];
