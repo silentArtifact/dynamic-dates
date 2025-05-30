@@ -6,6 +6,7 @@ declare module "obsidian" {
         getAbstractFileByPath(path: string): any;
         createFolder(path: string): Promise<void>;
         create(path: string, data: string): Promise<void>;
+        read(file: any): Promise<string>;
     }
 
     export class Workspace {
