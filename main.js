@@ -137,7 +137,14 @@ var DDSuggest = class extends import_obsidian.EditorSuggest {
       end
     );
     if (settings.autoCreate && !this.app.vault.getAbstractFileByPath(linkPath + ".md")) {
-      this.app.vault.create(linkPath + ".md", "");
+      const target = linkPath + ".md";
+      const folder = settings.dailyFolder.trim();
+      (async () => {
+        if (folder && !this.app.vault.getAbstractFileByPath(folder)) {
+          await this.app.vault.createFolder(folder);
+        }
+        await this.app.vault.create(target, "");
+      })();
     }
     this.close();
   }
