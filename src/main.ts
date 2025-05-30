@@ -289,7 +289,12 @@ class DDSuggest extends EditorSuggest<string> {
          * Replace the typed phrase with the selected wikilink and optionally
          * create the daily note on disk.
          */
-        selectSuggestion(value: string, ev: KeyboardEvent | MouseEvent) {
+        /**
+         * Handle a suggestion being chosen.  Obsidian renamed this hook from
+         * `selectSuggestion` to `onChooseSuggestion` in newer releases.  We
+         * implement both signatures for compatibility across versions.
+         */
+        onChooseSuggestion(value: string, ev: KeyboardEvent | MouseEvent) {
                 const { editor, start, end, query } = this.context!;
                 const { settings } = this.plugin;
 	
@@ -373,8 +378,14 @@ class DDSuggest extends EditorSuggest<string> {
                         })();
                 }
 	
-		this.close();
-	}
+                this.close();
+        }
+
+        // Older versions of Obsidian call this method instead.  Keep it as a
+        // thin wrapper for backwards compatibility.
+        selectSuggestion(value: string, ev: KeyboardEvent | MouseEvent) {
+                this.onChooseSuggestion(value, ev);
+        }
 	
 	
 }
