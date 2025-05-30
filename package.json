@@ -1,0 +1,13 @@
+{
+  "name": "dynamic-dates",
+  "version": "0.0.1",
+  "description": "Obsidian plugin for natural language dates",
+  "main": "main.js",
+  "scripts": {
+    "build": "tsc && cp dist/main.js main.js",
+    "test": "npm run build && node ./test/test.js"
+  },
+  "devDependencies": {
+    "typescript": "^5.8.3"
+  }
+}

@@ -1,235 +1,256 @@
-"use strict";
-var __defProp = Object.defineProperty;
-var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
-var __getOwnPropNames = Object.getOwnPropertyNames;
-var __hasOwnProp = Object.prototype.hasOwnProperty;
-var __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { enumerable: true, configurable: true, writable: true, value }) : obj[key] = value;
-var __export = (target, all) => {
-  for (var name in all)
-    __defProp(target, name, { get: all[name], enumerable: true });
+import { EditorSuggest, moment, Plugin, PluginSettingTab, Setting, } from "obsidian";
+const DEFAULT_SETTINGS = {
+    dateFormat: "YYYY-MM-DD",
+    dailyFolder: "",
+    autoCreate: false,
+    keepAliasWithShift: true,
 };
-var __copyProps = (to, from, except, desc) => {
-  if (from && typeof from === "object" || typeof from === "function") {
-    for (let key of __getOwnPropNames(from))
-      if (!__hasOwnProp.call(to, key) && key !== except)
-        __defProp(to, key, { get: () => from[key], enumerable: !(desc = __getOwnPropDesc(from, key)) || desc.enumerable });
-  }
-  return to;
-};
-var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: true }), mod);
-var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
-
-// src/main.ts
-var main_exports = {};
-__export(main_exports, {
-  default: () => DynamicDates
-});
-module.exports = __toCommonJS(main_exports);
-var import_obsidian = require("obsidian");
-var DEFAULT_SETTINGS = {
-  dateFormat: "YYYY-MM-DD",
-  dailyFolder: "",
-  autoCreate: false,
-  keepAliasWithShift: true
-};
-var BASE_WORDS = [
-  "today",
-  "yesterday",
-  "tomorrow",
-  "monday",
-  "tuesday",
-  "wednesday",
-  "thursday",
-  "friday",
-  "saturday",
-  "sunday"
+/* ------------------------------------------------------------------ */
+/* Phrase helpers                                                     */
+/* ------------------------------------------------------------------ */
+const BASE_WORDS = [
+    "today",
+    "yesterday",
+    "tomorrow",
+    "monday",
+    "tuesday",
+    "wednesday",
+    "thursday",
+    "friday",
+    "saturday",
+    "sunday",
 ];
-var PHRASES = BASE_WORDS.flatMap((w) => [w, `last ${w}`, `next ${w}`]);
-function phraseToMoment(phrase) {
-  const now = (0, import_obsidian.moment)();
-  const lower = phrase.toLowerCase().trim();
-  if (lower === "today") return now;
-  if (lower === "yesterday") return now.clone().subtract(1, "day");
-  if (lower === "tomorrow") return now.clone().add(1, "day");
-  const weekdays = [
+const WEEKDAYS = [
     "sunday",
     "monday",
     "tuesday",
     "wednesday",
     "thursday",
     "friday",
-    "saturday"
-  ];
-  for (let i = 0; i < 7; i++) {
-    const name = weekdays[i];
-    if (lower === name) {
-      const diff = (i - now.weekday() + 7) % 7;
-      return now.clone().add(diff, "day");
-    }
-    if (lower === `next ${name}`) {
-      const diff = (i - now.weekday() + 7) % 7 || 7;
-      return now.clone().add(diff, "day");
-    }
-    if (lower === `last ${name}`) {
-      const diff = (now.weekday() - i + 7) % 7 || 7;
-      return now.clone().subtract(diff, "day");
-    }
-  }
-
-  const md = lower.match(/^(january|february|march|april|may|june|july|august|september|october|november|december)\s+(\d{1,2}\w*)$/i);
-  if (md) {
-    const monthName = md[1];
-    const dayNum = parseInt(md[2]);
-    if (!isNaN(dayNum)) {
-      const target = now.clone().month(monthName).date(dayNum);
-      if (!target.isValid()) return null;
-      if (target.isBefore(now, "day")) target.add(1, "year");
-      return target;
-    }
-  }
-  return null;
-}
-var DDSuggest = class extends import_obsidian.EditorSuggest {
-  constructor(app, plugin) {
-    super(app);
-    __publicField(this, "plugin");
-    this.plugin = plugin;
-  }
-  onTrigger(cursor, editor, _file) {
-    const lineBefore = editor.getLine(cursor.line).slice(0, cursor.ch);
-    const tokens = lineBefore.split(/\s+/).filter((t) => t.length);
-    if (tokens.length === 0) return null;
-    let prefix = tokens[tokens.length - 1];
-    let startCh = cursor.ch - prefix.length;
-    const maybePrev = tokens[tokens.length - 2];
-    let hasQualifier = false;
-    if (maybePrev) {
-      const combined = `${maybePrev} ${prefix}`;
-      if (phraseToMoment(combined)) {
-        prefix = combined;
-        startCh -= maybePrev.length + 1;
-      } else if (["last", "next"].includes(maybePrev.toLowerCase())) {
-        prefix = combined;
-        startCh -= maybePrev.length + 1;
-        hasQualifier = true;
-      }
-    }
-    const query = prefix.toLowerCase().trim();
-    if (["l", "la", "las", "last", "n", "ne", "nex", "next"].includes(query))
-      return null;
-    if (!hasQualifier && query.length < 3) return null;
-    if (!PHRASES.some((p) => p.startsWith(query)) && !phraseToMoment(query)) return null;
-    return {
-      start: { line: cursor.line, ch: startCh },
-      end: { line: cursor.line, ch: cursor.ch },
-      query
-    };
-  }
-  getSuggestions(ctx) {
-    const q = ctx.query;
-    const direct = phraseToMoment(q);
-    if (direct) {
-      return [direct.format(this.plugin.settings.dateFormat)];
-    }
-    const uniq = /* @__PURE__ */ new Set();
-    for (const p of PHRASES) {
-      if (!p.startsWith(q)) continue;
-      const dt = phraseToMoment(p);
-      if (dt) uniq.add(dt.format(this.plugin.settings.dateFormat));
-    }
-    return [...uniq];
-  }
-  renderSuggestion(value, el) {
-    el.createDiv({ text: value });
-  }
-  selectSuggestion(value, ev) {
-    const { editor, start, end, query } = this.context;
-    const { settings } = this.plugin;
-    const targetDate = (0, import_obsidian.moment)(value, settings.dateFormat).format("YYYY-MM-DD");
-    const candidates = PHRASES.filter(
-      (p) => p.startsWith(query.toLowerCase()) && phraseToMoment(p)?.format("YYYY-MM-DD") === targetDate
-    );
-    const phrase = (candidates.sort((a, b) => a.length - b.length)[0] ?? query).toLowerCase();
-    let alias;
-    if (candidates.length) {
-      alias = phrase.replace(/\b\w/g, (ch) => ch.toUpperCase());
-    } else {
-      alias = (0, import_obsidian.moment)(targetDate, "YYYY-MM-DD").format("MMMM Do");
-    }
-    const linkPath = (settings.dailyFolder ? settings.dailyFolder + "/" : "") + value;
-    const link = `[[${linkPath}|${alias}]]`;
-    const keepTypedWords = settings.keepAliasWithShift && ev instanceof KeyboardEvent && ev.shiftKey;
-    editor.replaceRange(
-      keepTypedWords ? `${query} ${link}` : link,
-      start,
-      end
-    );
-    if (settings.autoCreate && !this.app.vault.getAbstractFileByPath(linkPath + ".md")) {
-      const target = linkPath + ".md";
-      const folder = settings.dailyFolder.trim();
-      (async () => {
-        if (folder && !this.app.vault.getAbstractFileByPath(folder)) {
-          await this.app.vault.createFolder(folder);
+    "saturday",
+];
+const PHRASES = BASE_WORDS.flatMap((w) => WEEKDAYS.includes(w) ? [w, `last ${w}`, `next ${w}`] : [w]);
+function phraseToMoment(phrase) {
+    const now = moment();
+    const lower = phrase.toLowerCase().trim();
+    if (lower === "today")
+        return now;
+    if (lower === "yesterday")
+        return now.clone().subtract(1, "day");
+    if (lower === "tomorrow")
+        return now.clone().add(1, "day");
+    const weekdays = WEEKDAYS;
+    for (let i = 0; i < 7; i++) {
+        const name = weekdays[i];
+        if (lower === name) {
+            const diff = (i - now.weekday() + 7) % 7;
+            return now.clone().add(diff, "day");
         }
-        await this.app.vault.create(target, "");
-      })();
+        if (lower === `next ${name}`) {
+            const diff = (i - now.weekday() + 7) % 7 || 7;
+            return now.clone().add(diff, "day");
+        }
+        if (lower === `last ${name}`) {
+            const diff = (now.weekday() - i + 7) % 7 || 7;
+            return now.clone().subtract(diff, "day");
+        }
     }
-    this.close();
-  }
-};
-var DynamicDates = class extends import_obsidian.Plugin {
-  constructor() {
-    super(...arguments);
-    __publicField(this, "settings");
-  }
-  async onload() {
-    await this.loadSettings();
-    this.registerEditorSuggest(new DDSuggest(this.app, this));
-    this.addSettingTab(new DDSettingTab(this.app, this));
-    console.log("Dynamic Dates loaded");
-  }
-  onunload() {
-    console.log("Dynamic Dates unloaded");
-  }
-  async loadSettings() {
-    this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
-  }
-  async saveSettings() {
-    await this.saveData(this.settings);
-  }
-};
-var DDSettingTab = class extends import_obsidian.PluginSettingTab {
-  constructor(app, plugin) {
-    super(app, plugin);
-    __publicField(this, "plugin");
-    this.plugin = plugin;
-  }
-  display() {
-    const { containerEl } = this;
-    containerEl.empty();
-    new import_obsidian.Setting(containerEl).setName("Date format").addText(
-      (t) => t.setPlaceholder("YYYY-MM-DD").setValue(this.plugin.settings.dateFormat).onChange(async (v) => {
-        this.plugin.settings.dateFormat = v.trim() || "YYYY-MM-DD";
-        await this.plugin.saveSettings();
-      })
-    );
-    new import_obsidian.Setting(containerEl).setName("Daily-note folder").addText(
-      (t) => t.setPlaceholder("Daily").setValue(this.plugin.settings.dailyFolder).onChange(async (v) => {
-        this.plugin.settings.dailyFolder = v.trim();
-        await this.plugin.saveSettings();
-      })
-    );
-    new import_obsidian.Setting(containerEl).setName("Create note if missing").addToggle(
-      (t) => t.setValue(this.plugin.settings.autoCreate).onChange(async (v) => {
-        this.plugin.settings.autoCreate = v;
-        await this.plugin.saveSettings();
-      })
-    );
-    new import_obsidian.Setting(containerEl).setName("Shift+Tab keeps alias").addToggle(
-      (t) => t.setValue(this.plugin.settings.keepAliasWithShift).onChange(async (v) => {
-        this.plugin.settings.keepAliasWithShift = v;
-        await this.plugin.saveSettings();
-      })
-    );
-  }
-};
+    // Month + day (e.g., "august 20" or "aug 20th")
+    const md = lower.match(/^(january|february|march|april|may|june|july|august|september|october|november|december)\s+(\d{1,2}\w*)$/i);
+    if (md) {
+        const monthName = md[1];
+        const dayNum = parseInt(md[2]);
+        if (!isNaN(dayNum)) {
+            const target = now.clone().month(monthName).date(dayNum);
+            if (!target.isValid())
+                return null;
+            if (target.isBefore(now, "day"))
+                target.add(1, "year");
+            return target;
+        }
+    }
+    return null;
+}
+/* ------------------------------------------------------------------ */
+/* Suggest box                                                        */
+/* ------------------------------------------------------------------ */
+class DDSuggest extends EditorSuggest {
+    plugin;
+    constructor(app, plugin) {
+        super(app);
+        this.plugin = plugin;
+    }
+    onTrigger(cursor, editor, _file) {
+        const lineBefore = editor.getLine(cursor.line).slice(0, cursor.ch);
+        /* split into tokens and consider last two */
+        const tokens = lineBefore.split(/\s+/).filter((t) => t.length);
+        if (tokens.length === 0)
+            return null;
+        let prefix = tokens[tokens.length - 1]; // current fragment
+        let startCh = cursor.ch - prefix.length;
+        const maybePrev = tokens[tokens.length - 2];
+        let hasQualifier = false;
+        if (maybePrev) {
+            const combined = `${maybePrev} ${prefix}`;
+            if (phraseToMoment(combined)) {
+                prefix = combined;
+                startCh -= maybePrev.length + 1;
+            }
+            else if (["last", "next"].includes(maybePrev.toLowerCase())) {
+                prefix = combined;
+                startCh -= maybePrev.length + 1;
+                hasQualifier = true;
+            }
+        }
+        const query = prefix.toLowerCase().trim();
+        /* -----------------------------------------------------------
+           Guard-rails
+           ----------------------------------------------------------- */
+        // never pop on bare/partial “last” / “next”
+        if (["l", "la", "las", "last", "n", "ne", "nex", "next"].includes(query))
+            return null;
+        // for stand-alone phrases (no qualifier) require ≥3 chars
+        if (!hasQualifier && query.length < 3)
+            return null;
+        // must map to a known phrase or a recognised month/day
+        if (!PHRASES.some((p) => p.startsWith(query)) && !phraseToMoment(query))
+            return null;
+        return {
+            start: { line: cursor.line, ch: startCh },
+            end: { line: cursor.line, ch: cursor.ch },
+            query,
+        };
+    }
+    getSuggestions(ctx) {
+        const q = ctx.query;
+        const direct = phraseToMoment(q);
+        if (direct) {
+            return [direct.format(this.plugin.settings.dateFormat)];
+        }
+        const uniq = new Set();
+        for (const p of PHRASES) {
+            if (!p.startsWith(q))
+                continue;
+            const dt = phraseToMoment(p);
+            if (dt)
+                uniq.add(dt.format(this.plugin.settings.dateFormat));
+        }
+        return [...uniq];
+    }
+    renderSuggestion(value, el) {
+        el.createDiv({ text: value });
+    }
+    selectSuggestion(value, ev) {
+        const { editor, start, end, query } = this.context;
+        const { settings } = this.plugin;
+        /* ----------------------------------------------------------------
+           1. Find the canonical phrase that maps to this calendar date
+        ----------------------------------------------------------------- */
+        const targetDate = moment(value, settings.dateFormat).format("YYYY-MM-DD");
+        const candidates = PHRASES.filter(p => p.startsWith(query.toLowerCase()) &&
+            phraseToMoment(p)?.format("YYYY-MM-DD") === targetDate);
+        let phrase = query.toLowerCase();
+        let alias;
+        if (candidates.length) {
+            phrase = candidates.sort((a, b) => a.length - b.length)[0];
+            alias = phrase.replace(/\b\w/g, ch => ch.toUpperCase());
+        }
+        else {
+            alias = moment(targetDate, "YYYY-MM-DD").format("MMMM Do");
+        }
+        /* ----------------------------------------------------------------
+           2. Build the wikilink with alias
+        ----------------------------------------------------------------- */
+        const linkPath = (settings.dailyFolder ? settings.dailyFolder + "/" : "") + value;
+        const link = `[[${linkPath}|${alias}]]`;
+        /* ----------------------------------------------------------------
+           3. Insert, respecting the Shift-modifier behaviour
+        ----------------------------------------------------------------- */
+        const keepTypedWords = settings.keepAliasWithShift &&
+            ev instanceof KeyboardEvent &&
+            ev.shiftKey;
+        editor.replaceRange(keepTypedWords ? `${query} ${link}` : link, start, end);
+        /* ----------------------------------------------------------------
+           4. Optional auto-create note
+        ----------------------------------------------------------------- */
+        if (settings.autoCreate &&
+            !this.app.vault.getAbstractFileByPath(linkPath + ".md")) {
+            const target = linkPath + ".md";
+            const folder = settings.dailyFolder.trim();
+            (async () => {
+                if (folder &&
+                    !this.app.vault.getAbstractFileByPath(folder)) {
+                    await this.app.vault.createFolder(folder);
+                }
+                await this.app.vault.create(target, "");
+            })();
+        }
+        this.close();
+    }
+}
+/* ------------------------------------------------------------------ */
+/* Main plugin & settings                                             */
+/* ------------------------------------------------------------------ */
+export default class DynamicDates extends Plugin {
+    settings = DEFAULT_SETTINGS;
+    async onload() {
+        await this.loadSettings();
+        this.registerEditorSuggest(new DDSuggest(this.app, this));
+        this.addSettingTab(new DDSettingTab(this.app, this));
+        console.log("Dynamic Dates loaded");
+    }
+    onunload() {
+        console.log("Dynamic Dates unloaded");
+    }
+    async loadSettings() {
+        this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
+    }
+    async saveSettings() {
+        await this.saveData(this.settings);
+    }
+}
+class DDSettingTab extends PluginSettingTab {
+    plugin;
+    constructor(app, plugin) {
+        super(app, plugin);
+        this.plugin = plugin;
+    }
+    display() {
+        const { containerEl } = this;
+        containerEl.empty();
+        new Setting(containerEl)
+            .setName("Date format")
+            .addText((t) => t
+            .setPlaceholder("YYYY-MM-DD")
+            .setValue(this.plugin.settings.dateFormat)
+            .onChange(async (v) => {
+            this.plugin.settings.dateFormat = v.trim() || "YYYY-MM-DD";
+            await this.plugin.saveSettings();
+        }));
+        new Setting(containerEl)
+            .setName("Daily-note folder")
+            .addText((t) => t
+            .setPlaceholder("Daily")
+            .setValue(this.plugin.settings.dailyFolder)
+            .onChange(async (v) => {
+            this.plugin.settings.dailyFolder = v.trim();
+            await this.plugin.saveSettings();
+        }));
+        new Setting(containerEl)
+            .setName("Create note if missing")
+            .addToggle((t) => t
+            .setValue(this.plugin.settings.autoCreate)
+            .onChange(async (v) => {
+            this.plugin.settings.autoCreate = v;
+            await this.plugin.saveSettings();
+        }));
+        new Setting(containerEl)
+            .setName("Shift+Tab keeps alias")
+            .addToggle((t) => t
+            .setValue(this.plugin.settings.keepAliasWithShift)
+            .onChange(async (v) => {
+            this.plugin.settings.keepAliasWithShift = v;
+            await this.plugin.saveSettings();
+        }));
+    }
+}
