@@ -1,5 +1,15 @@
 # dynamic-dates
-A plugin for Obsidian that lets you type natural language dates ("today", "next Friday"…) and automatically link them to your daily notes.
+
+Dynamic Dates is an Obsidian plugin that turns natural language phrases such as "today" or "next Friday" into wiki links pointing to your daily notes. As you type, the plugin suggests matching dates and, when accepted, replaces the phrase with a link to the corresponding note. It can also create missing daily notes on the fly and provides several options for formatting those links.
+
+## Features
+
+- Suggest dates while typing phrases like **today**, **tomorrow** or **next Monday**.
+- Insert a wiki link to your daily note using <kbd>Tab</kbd> or <kbd>Enter</kbd>.
+- Automatically create the daily note if it does not exist and optionally open it immediately.
+- Customise how the link alias looks: keep the typed text, capitalise the phrase or display the formatted date.
+- Define your own phrases (e.g. `Mid Year`) that map to a specific calendar date.
+- Convert an entire note's text to date links via the `Convert natural-language dates` command.
 
 ## Building
 
