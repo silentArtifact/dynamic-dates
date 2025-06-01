@@ -72,6 +72,8 @@
     addText(){ return this; }
     addToggle(){ return this; }
     addDropdown(){ return this; }
+    addButton(){ return this; }
+    addExtraButton(){ return this; }
   }
 
   const WEEKDAYS = ['sunday','monday','tuesday','wednesday','thursday','friday','saturday'];
@@ -277,6 +279,20 @@
   assert.ok(list.includes('2024-08-22'));
   const converted2 = cPlugin.convertText('see you fall start');
   assert.strictEqual(converted2, 'see you [[2024-08-22|Fall Start]]');
+
+  // multi-word custom phrase detection via onTrigger
+  phraseToMoment.customDates = { 'start of the new semester': '08-22' };
+  const p2 = new DynamicDates();
+  p2.settings = Object.assign({}, plugin.settings, {
+    customDates: { 'start of the new semester': '08-22' }
+  });
+  const s2 = new DDSuggest({ vault:{}, workspace:{} }, p2);
+  const trig = s2.onTrigger(
+    { line:0, ch:25 },
+    { getLine:()=> 'start of the new semester' },
+    null
+  );
+  assert.ok(trig && trig.start.ch === 0);
 
   console.log('All tests passed');
 })();

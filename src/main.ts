@@ -201,50 +201,44 @@ class DDSuggest extends EditorSuggest<string> {
         ): EditorSuggestTriggerInfo | null {
                 const lineBefore = editor.getLine(cursor.line).slice(0, cursor.ch);
 
-                // Split the text before the cursor and inspect the last two
-                // tokens so that phrases like "next friday" are handled.
-                const tokens = lineBefore.split(/\s+/).filter((t) => t.length);
-                if (tokens.length === 0) return null;
+                // Track word positions so we can look back multiple words
+                const words: { word: string; offset: number }[] = [];
+                lineBefore.replace(/\S+/g, (w, off) => {
+                        words.push({ word: w, offset: off });
+                        return "";
+                });
+                if (words.length === 0) return null;
 
-                let prefix = tokens[tokens.length - 1];            // current fragment
-                let startCh = cursor.ch - prefix.length;
-                const maybePrev = tokens[tokens.length - 2];
-                let hasQualifier = false;
+                const all = this.plugin.allPhrases();
+                const MAX = 6;
+                for (let k = Math.min(words.length, MAX); k >= 1; k--) {
+                        const slice = words.slice(words.length - k);
+                        const startCh = slice[0].offset;
+                        const prefix = lineBefore.slice(startCh);
+                        const query = prefix.toLowerCase().trim();
 
-                if (maybePrev) {
-                        const combined = `${maybePrev} ${prefix}`;
-                        if (phraseToMoment(combined)) {
-                                prefix = combined;
-                                startCh -= maybePrev.length + 1;
-                        } else if (["last", "next"].includes(maybePrev.toLowerCase())) {
-                                prefix = combined;
-                                startCh -= maybePrev.length + 1;
-                                hasQualifier = true;
-                        }
+                        const hasQualifier = query.startsWith("last ") || query.startsWith("next ");
+
+                        // never pop on bare/partial "last" / "next"
+                        if (["l","la","las","last","n","ne","nex","next"].includes(query))
+                                continue;
+
+                        // for stand-alone phrases (no qualifier) require ≥3 chars
+                        if (!hasQualifier && query.length < 3) continue;
+
+                        // must map to a known phrase or a recognised month/day
+                        if (!all.some((p) => p.startsWith(query)) && !phraseToMoment(query))
+                                continue;
+
+                        return {
+                                start: { line: cursor.line, ch: startCh },
+                                end:   { line: cursor.line, ch: cursor.ch },
+                                query,
+                        };
                 }
 
-                const query = prefix.toLowerCase().trim();
-
-		/* -----------------------------------------------------------
-		   Guard-rails
-		   ----------------------------------------------------------- */
-                // never pop on bare/partial "last" / "next"
-                if (["l","la","las","last","n","ne","nex","next"].includes(query))
-                        return null;
-
-		// for stand-alone phrases (no qualifier) require ≥3 chars
-		if (!hasQualifier && query.length < 3) return null;
-
-                // must map to a known phrase or a recognised month/day
-                const all = this.plugin.allPhrases();
-                if (!all.some((p) => p.startsWith(query)) && !phraseToMoment(query)) return null;
-
-                return {
-                        start: { line: cursor.line, ch: startCh },
-                        end:   { line: cursor.line, ch: cursor.ch },
-                        query,
-                };
-	}
+                return null;
+        }
 
         /**
          * Build the list of suggestion strings that should be shown for the
@@ -584,6 +578,45 @@ class DDSettingTab extends PluginSettingTab {
                                                 await this.plugin.saveSettings();
                                         }),
                         );
+
+                containerEl.createDiv({ text: "Custom date mappings" });
+                Object.entries(this.plugin.settings.customDates).forEach(([p, d]) => {
+                        let phrase = p;
+                        let date = d;
+                        new Setting(containerEl)
+                                .addText(t =>
+                                        t.setPlaceholder("Phrase")
+                                         .setValue(phrase)
+                                         .onChange(async (v: string) => {
+                                                 const map = { ...this.plugin.settings.customDates };
+                                                 delete map[phrase];
+                                                 phrase = v;
+                                                 map[phrase] = date;
+                                                 this.plugin.settings.customDates = map;
+                                                 await this.plugin.saveSettings();
+                                         }))
+                                .addText(t =>
+                                        t.setPlaceholder("MM-DD")
+                                         .setValue(date)
+                                         .onChange(async (v: string) => {
+                                                 date = v;
+                                                 this.plugin.settings.customDates[phrase] = v;
+                                                 await this.plugin.saveSettings();
+                                         }))
+                                .addExtraButton(b =>
+                                        b.onClick(async () => {
+                                                delete this.plugin.settings.customDates[phrase];
+                                                await this.plugin.saveSettings();
+                                                this.display();
+                                        }));
+                });
+                new Setting(containerEl)
+                        .addButton(b =>
+                                b.setButtonText("Add")
+                                 .onClick(() => {
+                                         this.plugin.settings.customDates["New phrase"] = "01-01";
+                                         this.display();
+                                 }));
 
                 new Setting(containerEl)
                         .setName("Custom dates (JSON)")
