@@ -162,46 +162,38 @@ class DDSuggest extends obsidian_1.EditorSuggest {
      */
     onTrigger(cursor, editor, _file) {
         const lineBefore = editor.getLine(cursor.line).slice(0, cursor.ch);
-        // Split the text before the cursor and inspect the last two
-        // tokens so that phrases like "next friday" are handled.
-        const tokens = lineBefore.split(/\s+/).filter((t) => t.length);
-        if (tokens.length === 0)
+        // Track word positions so we can look back multiple words
+        const words = [];
+        lineBefore.replace(/\S+/g, (w, off) => {
+            words.push({ word: w, offset: off });
+            return "";
+        });
+        if (words.length === 0)
             return null;
-        let prefix = tokens[tokens.length - 1]; // current fragment
-        let startCh = cursor.ch - prefix.length;
-        const maybePrev = tokens[tokens.length - 2];
-        let hasQualifier = false;
-        if (maybePrev) {
-            const combined = `${maybePrev} ${prefix}`;
-            if (phraseToMoment(combined)) {
-                prefix = combined;
-                startCh -= maybePrev.length + 1;
-            }
-            else if (["last", "next"].includes(maybePrev.toLowerCase())) {
-                prefix = combined;
-                startCh -= maybePrev.length + 1;
-                hasQualifier = true;
-            }
-        }
-        const query = prefix.toLowerCase().trim();
-        /* -----------------------------------------------------------
-           Guard-rails
-           ----------------------------------------------------------- */
-        // never pop on bare/partial "last" / "next"
-        if (["l", "la", "las", "last", "n", "ne", "nex", "next"].includes(query))
-            return null;
-        // for stand-alone phrases (no qualifier) require ≥3 chars
-        if (!hasQualifier && query.length < 3)
-            return null;
-        // must map to a known phrase or a recognised month/day
         const all = this.plugin.allPhrases();
-        if (!all.some((p) => p.startsWith(query)) && !phraseToMoment(query))
-            return null;
-        return {
-            start: { line: cursor.line, ch: startCh },
-            end: { line: cursor.line, ch: cursor.ch },
-            query,
-        };
+        const MAX = 6;
+        for (let k = Math.min(words.length, MAX); k >= 1; k--) {
+            const slice = words.slice(words.length - k);
+            const startCh = slice[0].offset;
+            const prefix = lineBefore.slice(startCh);
+            const query = prefix.toLowerCase().trim();
+            const hasQualifier = query.startsWith("last ") || query.startsWith("next ");
+            // never pop on bare/partial "last" / "next"
+            if (["l", "la", "las", "last", "n", "ne", "nex", "next"].includes(query))
+                continue;
+            // for stand-alone phrases (no qualifier) require ≥3 chars
+            if (!hasQualifier && query.length < 3)
+                continue;
+            // must map to a known phrase or a recognised month/day
+            if (!all.some((p) => p.startsWith(query)) && !phraseToMoment(query))
+                continue;
+            return {
+                start: { line: cursor.line, ch: startCh },
+                end: { line: cursor.line, ch: cursor.ch },
+                query,
+            };
+        }
+        return null;
     }
     /**
      * Build the list of suggestion strings that should be shown for the
