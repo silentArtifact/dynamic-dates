@@ -4,7 +4,7 @@
   "version": "1.0.0",
   "main": "main.js",
   "minAppVersion": "1.5.0",
-  "description": "Suggests natural-language dates and links them to your daily notes, with options for auto‑creating notes and custom phrases.",
+  "description": "Suggests natural-language dates and links them to your daily notes, with options for custom phrases.",
   "author": "Matthew Gromer",
   "authorUrl": "https://github.com/silentArtifact",
   "isDesktopOnly": false
