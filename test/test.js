@@ -131,6 +131,9 @@
   assert.strictEqual(fmt(phraseToMoment('thanksgiving')), '2024-11-28');
   assert.strictEqual(fmt(phraseToMoment('mlk day')), '2025-01-20');
   assert.strictEqual(fmt(phraseToMoment("new year's day")), '2025-01-01');
+  assert.strictEqual(fmt(phraseToMoment('last christmas')), '2023-12-25');
+  assert.strictEqual(fmt(phraseToMoment('christmas 24')), '2024-12-25');
+  assert.strictEqual(fmt(phraseToMoment('christmas of 2025')), '2025-12-25');
 
   /* ------------------------------------------------------------------ */
   /* onTrigger guard rails                                             */
