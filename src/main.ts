@@ -486,6 +486,17 @@ class DDSuggest extends EditorSuggest<string> {
  */
 export default class DynamicDates extends Plugin {
         settings: DDSettings = DEFAULT_SETTINGS;
+        customMap: Record<string, string> = {};
+
+        refreshCustomMap(): void {
+                this.customMap = {};
+                for (const key of Object.keys(this.settings.customDates || {})) {
+                        this.customMap[key.toLowerCase()] = key;
+                }
+                (phraseToMoment as any).customDates = Object.fromEntries(
+                        Object.entries(this.settings.customDates || {}).map(([k, v]) => [k.toLowerCase(), v]),
+                );
+        }
 
         getDailySettings(): any {
                 const mc = (this.app as any).metadataCache;
@@ -508,11 +519,7 @@ export default class DynamicDates extends Plugin {
 
         /** Return the canonical form for a custom phrase, if any. */
         customCanonical(lower: string): string | null {
-                lower = lower.toLowerCase();
-                for (const p of Object.keys(this.settings.customDates || {})) {
-                        if (p.toLowerCase() === lower) return p;
-                }
-                return null;
+                return this.customMap[lower.toLowerCase()] || null;
         }
 
         async onload() {
@@ -539,11 +546,11 @@ export default class DynamicDates extends Plugin {
                 const daily = this.getDailySettings();
                 if (daily && !this.settings.dateFormat) this.settings.dateFormat = daily.format;
                 if (!this.settings.customDates) this.settings.customDates = {};
-                (phraseToMoment as any).customDates = Object.fromEntries(Object.entries(this.settings.customDates).map(([k,v]) => [k.toLowerCase(), v]));
+                this.refreshCustomMap();
         }
         async saveSettings() {
                 await this.saveData(this.settings);
-                (phraseToMoment as any).customDates = Object.fromEntries(Object.entries(this.settings.customDates || {}).map(([k,v]) => [k.toLowerCase(), v]));
+                this.refreshCustomMap();
         }
 
         linkForPhrase(phrase: string): string | null {

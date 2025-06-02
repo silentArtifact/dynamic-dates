@@ -425,6 +425,14 @@ class DDSuggest extends obsidian_1.EditorSuggest {
  */
 class DynamicDates extends obsidian_1.Plugin {
     settings = DEFAULT_SETTINGS;
+    customMap = {};
+    refreshCustomMap() {
+        this.customMap = {};
+        for (const key of Object.keys(this.settings.customDates || {})) {
+            this.customMap[key.toLowerCase()] = key;
+        }
+        phraseToMoment.customDates = Object.fromEntries(Object.entries(this.settings.customDates || {}).map(([k, v]) => [k.toLowerCase(), v]));
+    }
     getDailySettings() {
         const mc = this.app.metadataCache;
         if (mc && typeof mc.getDailyNoteSettings === "function") {
@@ -444,12 +452,7 @@ class DynamicDates extends obsidian_1.Plugin {
     }
     /** Return the canonical form for a custom phrase, if any. */
     customCanonical(lower) {
-        lower = lower.toLowerCase();
-        for (const p of Object.keys(this.settings.customDates || {})) {
-            if (p.toLowerCase() === lower)
-                return p;
-        }
-        return null;
+        return this.customMap[lower.toLowerCase()] || null;
     }
     async onload() {
         await this.loadSettings();
@@ -475,11 +478,11 @@ class DynamicDates extends obsidian_1.Plugin {
             this.settings.dateFormat = daily.format;
         if (!this.settings.customDates)
             this.settings.customDates = {};
-        phraseToMoment.customDates = Object.fromEntries(Object.entries(this.settings.customDates).map(([k, v]) => [k.toLowerCase(), v]));
+        this.refreshCustomMap();
     }
     async saveSettings() {
         await this.saveData(this.settings);
-        phraseToMoment.customDates = Object.fromEntries(Object.entries(this.settings.customDates || {}).map(([k, v]) => [k.toLowerCase(), v]));
+        this.refreshCustomMap();
     }
     linkForPhrase(phrase) {
         const m = phraseToMoment(phrase);
