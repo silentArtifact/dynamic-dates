@@ -402,20 +402,7 @@ class DynamicDates extends obsidian_1.Plugin {
             alias = m.format("MMMM Do");
         }
         else {
-            const typedWords = phrase.split(/\s+/);
-            const phraseWords = phrase.split(/\s+/);
-            alias = phraseWords
-                .map((w, i) => {
-                const t = typedWords[i];
-                if (t &&
-                    t.length === w.length &&
-                    t.toLowerCase() === w.toLowerCase() &&
-                    ["last", "next"].includes(w.toLowerCase())) {
-                    return t;
-                }
-                return w.replace(/\b\w/g, ch => ch.toUpperCase());
-            })
-                .join(" ");
+            alias = phrase.replace(/\b\w/g, (ch) => ch.toUpperCase());
         }
         const folder = this.getDailyFolder();
         const linkPath = (folder ? folder + "/" : "") + value;
