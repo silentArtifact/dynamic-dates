@@ -492,7 +492,9 @@ export default class DynamicDates extends Plugin {
                 if (mc && typeof mc.getDailyNoteSettings === "function") {
                         try {
                                 return mc.getDailyNoteSettings();
-                        } catch {}
+                        } catch {
+                                /* ignore errors */
+                        }
                 }
                 return (this.app as any).internalPlugins?.plugins?.["daily-notes"]?.instance?.options || {};
         }
@@ -550,7 +552,6 @@ export default class DynamicDates extends Plugin {
                 const m = phraseToMoment(phrase);
                 if (!m) return null;
                 const value = m.format(this.settings.dateFormat);
-                const targetDate = m.format("YYYY-MM-DD");
                 const custom = this.customCanonical(phrase);
                 let alias: string;
                 if (custom) {

@@ -431,7 +431,9 @@ class DynamicDates extends obsidian_1.Plugin {
             try {
                 return mc.getDailyNoteSettings();
             }
-            catch { }
+            catch {
+                /* ignore errors */
+            }
         }
         return this.app.internalPlugins?.plugins?.["daily-notes"]?.instance?.options || {};
     }
@@ -486,7 +488,6 @@ class DynamicDates extends obsidian_1.Plugin {
         if (!m)
             return null;
         const value = m.format(this.settings.dateFormat);
-        const targetDate = m.format("YYYY-MM-DD");
         const custom = this.customCanonical(phrase);
         let alias;
         if (custom) {
