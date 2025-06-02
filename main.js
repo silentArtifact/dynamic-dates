@@ -195,7 +195,8 @@ class DDSuggest extends obsidian_1.EditorSuggest {
             const slice = words.slice(words.length - k);
             const startCh = slice[0].offset;
             const prefix = lineBefore.slice(startCh);
-            const query = prefix.toLowerCase().trim();
+            const raw = prefix.trim();
+            const query = raw.toLowerCase();
             const hasQualifier = query.startsWith("last ") || query.startsWith("next ");
             // never pop on bare/partial "last" / "next"
             if (["l", "la", "las", "last", "n", "ne", "nex", "next"].includes(query))
@@ -209,7 +210,7 @@ class DDSuggest extends obsidian_1.EditorSuggest {
             return {
                 start: { line: cursor.line, ch: startCh },
                 end: { line: cursor.line, ch: cursor.ch },
-                query,
+                query: raw,
             };
         }
         return null;
@@ -220,13 +221,14 @@ class DDSuggest extends obsidian_1.EditorSuggest {
      */
     getSuggestions(ctx) {
         const q = ctx.query;
-        const direct = phraseToMoment(q);
+        const qLower = q.toLowerCase();
+        const direct = phraseToMoment(qLower);
         if (direct) {
             return [direct.format(this.plugin.settings.dateFormat)];
         }
         const uniq = new Set();
         for (const p of this.plugin.allPhrases()) {
-            if (!p.startsWith(q))
+            if (!p.startsWith(qLower))
                 continue;
             const dt = phraseToMoment(p);
             if (dt)

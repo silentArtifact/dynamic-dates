@@ -235,7 +235,8 @@ class DDSuggest extends EditorSuggest<string> {
                         const slice = words.slice(words.length - k);
                         const startCh = slice[0].offset;
                         const prefix = lineBefore.slice(startCh);
-                        const query = prefix.toLowerCase().trim();
+                        const raw = prefix.trim();
+                        const query = raw.toLowerCase();
 
                         const hasQualifier = query.startsWith("last ") || query.startsWith("next ");
 
@@ -253,7 +254,7 @@ class DDSuggest extends EditorSuggest<string> {
                         return {
                                 start: { line: cursor.line, ch: startCh },
                                 end:   { line: cursor.line, ch: cursor.ch },
-                                query,
+                                query: raw,
                         };
                 }
 
@@ -266,15 +267,16 @@ class DDSuggest extends EditorSuggest<string> {
          */
         getSuggestions(ctx: EditorSuggestContext): string[] {
                 const q = ctx.query;
+                const qLower = q.toLowerCase();
 
-                const direct = phraseToMoment(q);
+                const direct = phraseToMoment(qLower);
                 if (direct) {
                         return [direct.format(this.plugin.settings.dateFormat)];
                 }
 
                 const uniq = new Set<string>();
                 for (const p of this.plugin.allPhrases()) {
-                        if (!p.startsWith(q)) continue;
+                        if (!p.startsWith(qLower)) continue;
                         const dt = phraseToMoment(p);
                         if (dt) uniq.add(dt.format(this.plugin.settings.dateFormat));
                 }
