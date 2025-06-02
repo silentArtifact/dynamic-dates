@@ -12,7 +12,7 @@
   if (!pluginSrc) throw new Error('DynamicDates class not found');
   const settingsSrc = code.match(/const DEFAULT_SETTINGS =[^]*?};/);
   if (!settingsSrc) throw new Error('DEFAULT_SETTINGS not found');
-  const helpersSrc = code.match(/function isProperNoun[^]*?}\nfunction properCase[^]*?\}/);
+  const helpersSrc = code.match(/function isProperNoun[^]*?}\nfunction properCase[^]*?}\nfunction needsYearAlias[^]*?\n\}/);
   if (!helpersSrc) throw new Error('helper functions not found');
 
   /* ------------------------------------------------------------------ */
@@ -53,11 +53,16 @@
     }
     format(fmt) {
       if (fmt === 'YYYY-MM-DD') return this.d.toISOString().slice(0,10);
+      const months = ['January','February','March','April','May','June','July','August','September','October','November','December'];
       if (fmt === 'MMMM Do') {
-        const months = ['January','February','March','April','May','June','July','August','September','October','November','December'];
         const day = this.d.getDate();
         const suf = (day%10===1&&day!==11)?'st':(day%10===2&&day!==12)?'nd':(day%10===3&&day!==13)?'rd':'th';
         return months[this.d.getMonth()] + ' ' + day + suf;
+      }
+      if (fmt === 'MMMM Do, YYYY') {
+        const day = this.d.getDate();
+        const suf = (day%10===1&&day!==11)?'st':(day%10===2&&day!==12)?'nd':(day%10===3&&day!==13)?'rd':'th';
+        return months[this.d.getMonth()] + ' ' + day + suf + ', ' + this.d.getFullYear();
       }
       return this.d.toISOString();
     }
@@ -168,6 +173,11 @@
   sugg.selectSuggestion('2024-05-02', new KeyboardEvent({ shiftKey:false, key:'Tab' }));
   assert.strictEqual(inserted.pop(), '[[2024-05-02|Last Thursday]]');
 
+  // month/day with qualifier should append year
+  sugg.context = { editor, start:{line:0,ch:0}, end:{line:0,ch:11}, query:'last may 1' };
+  sugg.selectSuggestion('2024-05-01', new KeyboardEvent({ shiftKey:false, key:'Tab' }));
+  assert.strictEqual(inserted.pop(), '[[2024-05-01|May 1st, 2024]]');
+
 
   /* ------------------------------------------------------------------ */
   /* convertText utility                                               */
@@ -189,6 +199,7 @@
   assert.strictEqual(lf.linkForPhrase('tomorrow'), '[[Journal/2024-05-09|tomorrow]]');
   lf.settings.aliasFormat = 'date';
   assert.strictEqual(lf.linkForPhrase('tomorrow'), '[[Journal/2024-05-09|May 9th]]');
+  assert.strictEqual(lf.linkForPhrase('last may 1'), '[[Journal/2024-05-01|May 1st, 2024]]');
   assert.strictEqual(lf.linkForPhrase('nonsense'), null);
 
   /* ------------------------------------------------------------------ */
