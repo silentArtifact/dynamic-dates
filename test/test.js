@@ -12,7 +12,7 @@
   if (!pluginSrc) throw new Error('DynamicDates class not found');
   const settingsSrc = code.match(/const DEFAULT_SETTINGS =[^]*?};/);
   if (!settingsSrc) throw new Error('DEFAULT_SETTINGS not found');
-  const helpersSrc = code.match(/function isProperNoun[^]*?}\nfunction properCase[^]*?}\nfunction needsYearAlias[^]*?\n\}/);
+  const helpersSrc = code.match(/const HOLIDAY_PHRASES[^]*?const HOLIDAY_WORDS[^]*?function isProperNoun[^]*?}\nfunction properCase[^]*?}\nfunction needsYearAlias[^]*?\n\}/);
   if (!helpersSrc) throw new Error('helper functions not found');
 
   /* ------------------------------------------------------------------ */

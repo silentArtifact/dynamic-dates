@@ -72,23 +72,6 @@ const MONTHS = [
         "december",
 ];
 
-function isProperNoun(word: string): boolean {
-        const w = word.toLowerCase();
-        return WEEKDAYS.includes(w) || MONTHS.includes(w);
-}
-
-function properCase(word: string): string {
-        return word.charAt(0).toUpperCase() + word.slice(1).toLowerCase();
-}
-
-function needsYearAlias(phrase: string): boolean {
-        const lower = phrase.toLowerCase().trim();
-        if (/^(?:last|next)\s+(jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:tember)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)\s+\d{1,2}(?:st|nd|rd|th)?$/.test(lower)) {
-                return true;
-        }
-        return /^(jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:tember)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)\s+\d{1,2}(?:st|nd|rd|th)?(?:,)?\s*\d{2,4}$/.test(lower);
-}
-
 const HOLIDAY_PHRASES = [
         "new year's day",
         "mlk day",
@@ -105,6 +88,36 @@ const HOLIDAY_PHRASES = [
         "christmas",
         "christmas day",
 ];
+
+const HOLIDAY_WORDS = Array.from(
+        new Set(
+                HOLIDAY_PHRASES.flatMap((p) =>
+                        p.split(/\s+/).map((w) => w.toLowerCase()),
+                ),
+        ),
+);
+
+function isProperNoun(word: string): boolean {
+        const w = word.toLowerCase();
+        return (
+                WEEKDAYS.includes(w) ||
+                MONTHS.includes(w) ||
+                HOLIDAY_WORDS.includes(w)
+        );
+}
+
+function properCase(word: string): string {
+        return word.charAt(0).toUpperCase() + word.slice(1).toLowerCase();
+}
+
+function needsYearAlias(phrase: string): boolean {
+        const lower = phrase.toLowerCase().trim();
+        if (/^(?:last|next)\s+(jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:tember)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)\s+\d{1,2}(?:st|nd|rd|th)?$/.test(lower)) {
+                return true;
+        }
+        return /^(jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:tember)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)\s+\d{1,2}(?:st|nd|rd|th)?(?:,)?\s*\d{2,4}$/.test(lower);
+}
+
 const PHRASES = BASE_WORDS.flatMap((w) =>
         WEEKDAYS.includes(w) ? [w, `last ${w}`, `next ${w}`] : [w],
 ).concat(HOLIDAY_PHRASES);
