@@ -2,7 +2,6 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 const obsidian_1 = require("obsidian");
 const DEFAULT_SETTINGS = {
-    dateFormat: "YYYY-MM-DD",
     acceptKey: "Tab",
     noAliasWithShift: false,
     aliasFormat: "capitalize",
@@ -250,7 +249,7 @@ class DDSuggest extends obsidian_1.EditorSuggest {
         const qLower = q.toLowerCase();
         const direct = phraseToMoment(qLower);
         if (direct) {
-            return [direct.format(this.plugin.settings.dateFormat)];
+            return [direct.format(this.plugin.getDateFormat())];
         }
         const uniq = new Set();
         for (const p of this.plugin.allPhrases()) {
@@ -258,7 +257,7 @@ class DDSuggest extends obsidian_1.EditorSuggest {
                 continue;
             const dt = phraseToMoment(p);
             if (dt)
-                uniq.add(dt.format(this.plugin.settings.dateFormat));
+                uniq.add(dt.format(this.plugin.getDateFormat()));
         }
         return [...uniq];
     }
@@ -266,7 +265,7 @@ class DDSuggest extends obsidian_1.EditorSuggest {
     renderSuggestion(value, el) {
         const query = this.context?.query || "";
         let phrase = query.toLowerCase();
-        const target = (0, obsidian_1.moment)(value, this.plugin.settings.dateFormat).format("YYYY-MM-DD");
+        const target = (0, obsidian_1.moment)(value, this.plugin.getDateFormat()).format("YYYY-MM-DD");
         const candidates = this.plugin
             .allPhrases()
             .filter((p) => p.startsWith(phrase) &&
@@ -337,7 +336,7 @@ class DDSuggest extends obsidian_1.EditorSuggest {
         /* ----------------------------------------------------------------
            1. Find the canonical phrase that maps to this calendar date
         ----------------------------------------------------------------- */
-        const targetDate = (0, obsidian_1.moment)(value, settings.dateFormat).format("YYYY-MM-DD");
+        const targetDate = (0, obsidian_1.moment)(value, this.plugin.getDateFormat()).format("YYYY-MM-DD");
         const candidates = this.plugin.allPhrases().filter(p => p.startsWith(query.toLowerCase()) &&
             phraseToMoment(p)?.format("YYYY-MM-DD") === targetDate);
         let phrase = query.toLowerCase();
@@ -447,6 +446,10 @@ class DynamicDates extends obsidian_1.Plugin {
         const daily = this.getDailySettings();
         return daily?.folder || "";
     }
+    getDateFormat() {
+        const daily = this.getDailySettings();
+        return daily?.format || "YYYY-MM-DD";
+    }
     allPhrases() {
         return [...PHRASES, ...Object.keys(this.settings.customDates || {}).map(p => p.toLowerCase())];
     }
@@ -473,9 +476,6 @@ class DynamicDates extends obsidian_1.Plugin {
     }
     async loadSettings() {
         this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
-        const daily = this.getDailySettings();
-        if (daily && !this.settings.dateFormat)
-            this.settings.dateFormat = daily.format;
         if (!this.settings.customDates)
             this.settings.customDates = {};
         this.refreshCustomMap();
@@ -488,7 +488,7 @@ class DynamicDates extends obsidian_1.Plugin {
         const m = phraseToMoment(phrase);
         if (!m)
             return null;
-        const value = m.format(this.settings.dateFormat);
+        const value = m.format(this.getDateFormat());
         const targetDate = m.format("YYYY-MM-DD");
         const custom = this.customCanonical(phrase);
         let alias;
@@ -533,22 +533,6 @@ class DDSettingTab extends obsidian_1.PluginSettingTab {
     display() {
         const { containerEl } = this;
         containerEl.empty();
-        new obsidian_1.Setting(containerEl)
-            .setName("Date format")
-            .setDesc("Format used when inserting dates")
-            .addDropdown((d) => d
-            .addOptions({
-            "YYYY-MM-DD": "YYYY-MM-DD",
-            "DD-MM-YYYY": "DD-MM-YYYY",
-            "MM-DD-YYYY": "MM-DD-YYYY",
-            "YYYY/MM/DD": "YYYY/MM/DD",
-        })
-            .setValue(this.plugin.settings.dateFormat)
-            .onChange(async (v) => {
-            this.plugin.settings.dateFormat = v;
-            await this.plugin.saveSettings();
-        }));
-        new obsidian_1.Setting(containerEl);
         new obsidian_1.Setting(containerEl)
             .setName("Accept key")
             .setDesc("Key used to accept a suggestion")

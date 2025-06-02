@@ -130,7 +130,7 @@
   /* ------------------------------------------------------------------ */
   /* onTrigger guard rails                                             */
   /* ------------------------------------------------------------------ */
-  const plugin = { settings: { dateFormat: 'YYYY-MM-DD', acceptKey:'Tab', noAliasWithShift: true, aliasFormat:'capitalize' }, dailyFolder:'', allPhrases: () => PHRASES, getDailyFolder(){ return this.dailyFolder; }, getDailySettings(){ return { folder:this.dailyFolder, template:'tpl.md', format:'YYYY-MM-DD' }; }, customCanonical(){ return null; } };
+  const plugin = { settings: { dateFormat: 'YYYY-MM-DD', acceptKey:'Tab', noAliasWithShift: true, aliasFormat:'capitalize' }, dailyFolder:'', allPhrases: () => PHRASES, getDailyFolder(){ return this.dailyFolder; }, getDailySettings(){ return { folder:this.dailyFolder, template:'tpl.md', format:'YYYY-MM-DD' }; }, getDateFormat(){ return this.getDailySettings().format; }, customCanonical(){ return null; } };
   const app = { vault: {} };
   const sugg = new DDSuggest(app, plugin);
 
@@ -223,7 +223,7 @@
   /* ------------------------------------------------------------------ */
   /* onTrigger additional guard rails                                   */
   /* ------------------------------------------------------------------ */
-  const tPlugin = { settings: Object.assign({}, plugin.settings), dailyFolder:'Daily', allPhrases: () => PHRASES, getDailyFolder(){ return this.dailyFolder; }, getDailySettings(){ return { folder:this.dailyFolder, template:'tpl.md', format:'YYYY-MM-DD' }; }, customCanonical(){ return null; } };
+  const tPlugin = { settings: Object.assign({}, plugin.settings), dailyFolder:'Daily', allPhrases: () => PHRASES, getDailyFolder(){ return this.dailyFolder; }, getDailySettings(){ return { folder:this.dailyFolder, template:'tpl.md', format:'YYYY-MM-DD' }; }, getDateFormat(){ return this.getDailySettings().format; }, customCanonical(){ return null; } };
   const tApp = { vault:{}, workspace:{} };
   const tSugg = new DDSuggest(tApp, tPlugin);
   assert.strictEqual(tSugg.onTrigger({line:0,ch:4}, { getLine:()=> 'next' }, null), null);
