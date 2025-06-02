@@ -492,7 +492,15 @@ class DDSettingTab extends obsidian_1.PluginSettingTab {
             this.plugin.settings.aliasFormat = v;
             await this.plugin.saveSettings();
         }));
-        containerEl.createDiv({ text: "Custom date mappings" });
+        containerEl.createEl("h3", { text: "Custom date mappings" });
+        new obsidian_1.Setting(containerEl)
+            .setDesc("Map phrases to fixed dates, e.g. 'Mid Year' → '06-01'")
+            .addExtraButton(b => b.setIcon("plus")
+            .setTooltip("Add mapping")
+            .onClick(() => {
+            this.plugin.settings.customDates["New phrase"] = "01-01";
+            this.display();
+        }));
         Object.entries(this.plugin.settings.customDates).forEach(([p, d]) => {
             let phrase = p;
             let date = d;
@@ -514,18 +522,14 @@ class DDSettingTab extends obsidian_1.PluginSettingTab {
                 this.plugin.settings.customDates[phrase] = v;
                 await this.plugin.saveSettings();
             }))
-                .addExtraButton(b => b.onClick(async () => {
+                .addExtraButton(b => b.setIcon("trash")
+                .setTooltip("Remove")
+                .onClick(async () => {
                 delete this.plugin.settings.customDates[phrase];
                 await this.plugin.saveSettings();
                 this.display();
             }));
         });
-        new obsidian_1.Setting(containerEl)
-            .addButton(b => b.setButtonText("Add")
-            .onClick(() => {
-            this.plugin.settings.customDates["New phrase"] = "01-01";
-            this.display();
-        }));
         // A legacy JSON input for custom dates existed here in early
         // versions of the plugin. It has been removed to simplify the
         // settings UI while retaining support for custom phrases via
