@@ -303,30 +303,36 @@ class DDSuggest extends EditorSuggest<string> {
 
                 let phrase = query.toLowerCase();
                 let alias: string;
+                const custom = this.plugin.customCanonical(phrase);
 
                 if (settings.aliasFormat === "keep") {
-                        alias = query;
+                        alias = custom || query;
                 } else if (settings.aliasFormat === "date") {
                         alias = moment(targetDate, "YYYY-MM-DD").format("MMMM Do");
                 } else {
                         if (candidates.length) {
                                 phrase = candidates.sort((a, b) => a.length - b.length)[0];
-                                const typedWords = query.split(/\s+/);
-                                const phraseWords = phrase.split(/\s+/);
-                                alias = phraseWords
-                                        .map((w, i) => {
-                                                const t = typedWords[i];
-                                                if (
-                                                        t &&
-                                                        t.length === w.length &&
-                                                        t.toLowerCase() === w.toLowerCase() &&
-                                                        ["last", "next"].includes(w.toLowerCase())
-                                                ) {
-                                                        return t;
-                                                }
-                                                return w.replace(/\b\w/g, ch => ch.toUpperCase());
-                                        })
-                                        .join(" ");
+                                const canonical = this.plugin.customCanonical(phrase);
+                                if (canonical) {
+                                        alias = canonical;
+                                } else {
+                                        const typedWords = query.split(/\s+/);
+                                        const phraseWords = phrase.split(/\s+/);
+                                        alias = phraseWords
+                                                .map((w, i) => {
+                                                        const t = typedWords[i];
+                                                        if (
+                                                                t &&
+                                                                t.length === w.length &&
+                                                                t.toLowerCase() === w.toLowerCase() &&
+                                                                ["last", "next"].includes(w.toLowerCase())
+                                                        ) {
+                                                                return t;
+                                                        }
+                                                        return w.replace(/\b\w/g, ch => ch.toUpperCase());
+                                                })
+                                                .join(" ");
+                                }
                         } else {
                                 alias = moment(targetDate, "YYYY-MM-DD").format("MMMM Do");
                         }
@@ -416,6 +422,15 @@ export default class DynamicDates extends Plugin {
                 return [...PHRASES, ...Object.keys(this.settings.customDates || {}).map(p => p.toLowerCase())];
         }
 
+        /** Return the canonical form for a custom phrase, if any. */
+        customCanonical(lower: string): string | null {
+                lower = lower.toLowerCase();
+                for (const p of Object.keys(this.settings.customDates || {})) {
+                        if (p.toLowerCase() === lower) return p;
+                }
+                return null;
+        }
+
         async onload() {
                 await this.loadSettings();
                 this.registerEditorSuggest(new DDSuggest(this.app, this));
@@ -452,8 +467,11 @@ export default class DynamicDates extends Plugin {
                 if (!m) return null;
                 const value = m.format(this.settings.dateFormat);
                 const targetDate = m.format("YYYY-MM-DD");
+                const custom = this.customCanonical(phrase);
                 let alias: string;
-                if (this.settings.aliasFormat === "keep") {
+                if (custom) {
+                        alias = custom;
+                } else if (this.settings.aliasFormat === "keep") {
                         alias = phrase;
                 } else if (this.settings.aliasFormat === "date") {
                         alias = m.format("MMMM Do");
@@ -584,6 +602,45 @@ class DDSettingTab extends PluginSettingTab {
                                                 await this.plugin.saveSettings();
                                         }),
                         );
+
+                containerEl.createDiv({ text: "Custom date mappings" });
+                Object.entries(this.plugin.settings.customDates).forEach(([p, d]) => {
+                        let phrase = p;
+                        let date = d;
+                        new Setting(containerEl)
+                                .addText(t =>
+                                        t.setPlaceholder("Phrase")
+                                         .setValue(phrase)
+                                         .onChange(async (v: string) => {
+                                                 const map = { ...this.plugin.settings.customDates };
+                                                 delete map[phrase];
+                                                 phrase = v;
+                                                 map[phrase] = date;
+                                                 this.plugin.settings.customDates = map;
+                                                 await this.plugin.saveSettings();
+                                         }))
+                                .addText(t =>
+                                        t.setPlaceholder("MM-DD")
+                                         .setValue(date)
+                                         .onChange(async (v: string) => {
+                                                 date = v;
+                                                 this.plugin.settings.customDates[phrase] = v;
+                                                 await this.plugin.saveSettings();
+                                         }))
+                                .addExtraButton(b =>
+                                        b.onClick(async () => {
+                                                delete this.plugin.settings.customDates[phrase];
+                                                await this.plugin.saveSettings();
+                                                this.display();
+                                        }));
+                });
+                new Setting(containerEl)
+                        .addButton(b =>
+                                b.setButtonText("Add")
+                                 .onClick(() => {
+                                         this.plugin.settings.customDates["New phrase"] = "01-01";
+                                         this.display();
+                                 }));
 
                 new Setting(containerEl)
                         .setName("Custom dates (JSON)")

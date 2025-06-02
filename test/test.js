@@ -72,6 +72,8 @@
     addText(){ return this; }
     addToggle(){ return this; }
     addDropdown(){ return this; }
+    addButton(){ return this; }
+    addExtraButton(){ return this; }
   }
 
   const WEEKDAYS = ['sunday','monday','tuesday','wednesday','thursday','friday','saturday'];
@@ -115,7 +117,7 @@
   /* ------------------------------------------------------------------ */
   /* onTrigger guard rails                                             */
   /* ------------------------------------------------------------------ */
-  const plugin = { settings: { dateFormat: 'YYYY-MM-DD', autoCreate: false, acceptKey:'Tab', noAliasWithShift: true, aliasFormat:'capitalize', openOnCreate:false }, dailyFolder:'', allPhrases: () => PHRASES, getDailyFolder(){ return this.dailyFolder; } };
+  const plugin = { settings: { dateFormat: 'YYYY-MM-DD', autoCreate: false, acceptKey:'Tab', noAliasWithShift: true, aliasFormat:'capitalize', openOnCreate:false }, dailyFolder:'', allPhrases: () => PHRASES, getDailyFolder(){ return this.dailyFolder; }, customCanonical(){ return null; } };
   const app = { vault: {} };
   const sugg = new DDSuggest(app, plugin);
 
@@ -230,7 +232,7 @@
   /* ------------------------------------------------------------------ */
   /* onTrigger additional guard rails                                   */
   /* ------------------------------------------------------------------ */
-  const tPlugin = { settings: Object.assign({}, plugin.settings, { autoCreate: false }), dailyFolder:'Daily', allPhrases: () => PHRASES, getDailyFolder(){ return this.dailyFolder; } };
+  const tPlugin = { settings: Object.assign({}, plugin.settings, { autoCreate: false }), dailyFolder:'Daily', allPhrases: () => PHRASES, getDailyFolder(){ return this.dailyFolder; }, customCanonical(){ return null; } };
   const tApp = { vault:{}, workspace:{} };
   const tSugg = new DDSuggest(tApp, tPlugin);
   assert.strictEqual(tSugg.onTrigger({line:0,ch:4}, { getLine:()=> 'next' }, null), null);
@@ -276,7 +278,12 @@
   const list = cSugg.getSuggestions({ query:'fall st' });
   assert.ok(list.includes('2024-08-22'));
   const converted2 = cPlugin.convertText('see you fall start');
-  assert.strictEqual(converted2, 'see you [[2024-08-22|Fall Start]]');
+  assert.strictEqual(converted2, 'see you [[2024-08-22|fall start]]');
+
+  cPlugin.settings.customDates['Big Event'] = '02-03';
+  phraseToMoment.customDates = Object.fromEntries(Object.entries(cPlugin.settings.customDates).map(([k,v])=>[k.toLowerCase(),v]));
+  const converted3 = cPlugin.convertText('the Big Event is soon');
+  assert.strictEqual(converted3, 'the [[2025-02-03|Big Event]] is soon');
 
   console.log('All tests passed');
 })();
