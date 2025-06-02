@@ -33,3 +33,10 @@ npm run zip
 ```
 
 Upload the generated `dynamic-dates-<version>.zip` file when creating a GitHub release.
+
+## Continuous Integration
+
+This project uses [GitHub Actions](https://github.com/features/actions) to run
+`npm test` whenever changes are pushed or pull requests are opened against the
+`main` branch. The workflow configuration lives in
+`.github/workflows/node.yml`.
