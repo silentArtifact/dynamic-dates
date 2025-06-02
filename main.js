@@ -526,17 +526,9 @@ class DDSettingTab extends obsidian_1.PluginSettingTab {
             this.plugin.settings.customDates["New phrase"] = "01-01";
             this.display();
         }));
-        new obsidian_1.Setting(containerEl)
-            .setName("Custom dates (JSON)")
-            .addText((t) => t
-            .setPlaceholder('{"phrase":"MM-DD"}')
-            .setValue(JSON.stringify(this.plugin.settings.customDates))
-            .onChange(async (v) => {
-            try {
-                this.plugin.settings.customDates = JSON.parse(v || '{}');
-            }
-            catch { }
-            await this.plugin.saveSettings();
-        }));
+        // A legacy JSON input for custom dates existed here in early
+        // versions of the plugin. It has been removed to simplify the
+        // settings UI while retaining support for custom phrases via
+        // the individual mapping fields above.
     }
 }
