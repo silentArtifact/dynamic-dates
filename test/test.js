@@ -176,7 +176,10 @@
     createFolder: (p) => { calls.push(['mkdir', p]); return { then: r => r() }; },
     create: (p, d) => { calls.push(['create', p, d]); return { then: r => r() }; },
   };
-  app.internalPlugins = { plugins: { 'daily-notes': { instance: { options: { template: 'tpl.md' } } } } };
+  app.internalPlugins = { plugins: {
+    'daily-notes': { instance: { options: { template: 'tpl.md' } } },
+    'templates': { instance: { parseTemplate: (f) => { calls.push(['tpl', f.path]); return '# HELLO'; } } }
+  } };
   app.workspace = { openLinkText:(p)=>calls.push(['open', p]) };
   const ed2 = { getLine:()=>'', replaceRange:(t)=>calls.push(['insert', t]) };
   sugg.app = app;
@@ -190,8 +193,8 @@
     ['check', 'Daily'],
     ['mkdir', 'Daily'],
     ['check', 'tpl.md'],
-    ['read', 'tpl.md'],
-    ['create', 'Daily/2024-05-09.md', '# hello'],
+    ['tpl', 'tpl.md'],
+    ['create', 'Daily/2024-05-09.md', '# HELLO'],
     ['open', 'Daily/2024-05-09.md'],
   ]);
 
