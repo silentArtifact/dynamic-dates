@@ -313,7 +313,7 @@ class DDSuggest extends obsidian_1.EditorSuggest {
                     await this.app.vault.createFolder(folder);
                 }
                 let tpl = "";
-                const daily = this.app.internalPlugins?.plugins?.["daily-notes"]?.instance?.options;
+                const daily = this.plugin.getDailySettings();
                 if (daily?.template) {
                     const f = this.app.vault.getAbstractFileByPath(daily.template);
                     if (f)
@@ -350,8 +350,18 @@ class DDSuggest extends obsidian_1.EditorSuggest {
  */
 class DynamicDates extends obsidian_1.Plugin {
     settings = DEFAULT_SETTINGS;
+    getDailySettings() {
+        const mc = this.app.metadataCache;
+        if (mc && typeof mc.getDailyNoteSettings === "function") {
+            try {
+                return mc.getDailyNoteSettings();
+            }
+            catch { }
+        }
+        return this.app.internalPlugins?.plugins?.["daily-notes"]?.instance?.options || {};
+    }
     getDailyFolder() {
-        const daily = this.app.internalPlugins?.plugins?.["daily-notes"]?.instance?.options;
+        const daily = this.getDailySettings();
         return daily?.folder || "";
     }
     allPhrases() {
@@ -385,7 +395,7 @@ class DynamicDates extends obsidian_1.Plugin {
     }
     async loadSettings() {
         this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
-        const daily = this.app.internalPlugins?.plugins?.["daily-notes"]?.instance?.options;
+        const daily = this.getDailySettings();
         if (daily && !this.settings.dateFormat)
             this.settings.dateFormat = daily.format;
         if (!this.settings.customDates)

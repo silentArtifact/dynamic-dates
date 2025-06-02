@@ -377,7 +377,7 @@ class DDSuggest extends EditorSuggest<string> {
                                         await this.app.vault.createFolder(folder);
                                 }
                                 let tpl = "";
-                                const daily = (this.app as any).internalPlugins?.plugins?.["daily-notes"]?.instance?.options;
+                                const daily = this.plugin.getDailySettings();
                                 if (daily?.template) {
                                         const f = this.app.vault.getAbstractFileByPath(daily.template);
                                         if (f) tpl = await this.app.vault.read(f as TFile);
@@ -417,8 +417,18 @@ class DDSuggest extends EditorSuggest<string> {
 export default class DynamicDates extends Plugin {
         settings: DDSettings = DEFAULT_SETTINGS;
 
+        getDailySettings(): any {
+                const mc = (this.app as any).metadataCache;
+                if (mc && typeof mc.getDailyNoteSettings === "function") {
+                        try {
+                                return mc.getDailyNoteSettings();
+                        } catch {}
+                }
+                return (this.app as any).internalPlugins?.plugins?.["daily-notes"]?.instance?.options || {};
+        }
+
         getDailyFolder(): string {
-                const daily = (this.app as any).internalPlugins?.plugins?.["daily-notes"]?.instance?.options;
+                const daily = this.getDailySettings();
                 return daily?.folder || "";
         }
 
@@ -456,7 +466,7 @@ export default class DynamicDates extends Plugin {
 
         async loadSettings() {
                 this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
-                const daily = (this.app as any).internalPlugins?.plugins?.["daily-notes"]?.instance?.options;
+                const daily = this.getDailySettings();
                 if (daily && !this.settings.dateFormat) this.settings.dateFormat = daily.format;
                 if (!this.settings.customDates) this.settings.customDates = {};
                 (phraseToMoment as any).customDates = Object.fromEntries(Object.entries(this.settings.customDates).map(([k,v]) => [k.toLowerCase(), v]));
