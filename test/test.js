@@ -12,8 +12,9 @@
   if (!pluginSrc) throw new Error('DynamicDates class not found');
   const settingsSrc = code.match(/const DEFAULT_SETTINGS =[^]*?};/);
   if (!settingsSrc) throw new Error('DEFAULT_SETTINGS not found');
-  const helpersSrc = code.match(/const HOLIDAY_PHRASES[^]*?const HOLIDAY_WORDS[^]*?function isProperNoun[^]*?}\nfunction properCase[^]*?}\nfunction needsYearAlias[^]*?\n\}/);
+  const helpersSrc = code.match(/function nthWeekdayOfMonth[^]*?function needsYearAlias[^]*?\n\}/);
   if (!helpersSrc) throw new Error('helper functions not found');
+  const helpersCode = helpersSrc[0].replace(/const DEFAULT_SETTINGS[^]*?};/, '');
 
   /* ------------------------------------------------------------------ */
   /* Minimal runtime stubs                                              */
@@ -91,7 +92,7 @@
   const obsidian_1 = { moment, EditorSuggest, KeyboardEvent, Plugin, PluginSettingTab, Setting };
   const context = { moment, WEEKDAYS, MONTHS, BASE_WORDS, PHRASES, EditorSuggest, KeyboardEvent, Plugin, PluginSettingTab, Setting, obsidian_1 };
   vm.createContext(context);
-  vm.runInContext(helpersSrc[0], context);
+  vm.runInContext(helpersCode, context);
   vm.runInContext(funcSrc[0], context);
   vm.runInContext(settingsSrc[0], context);
   vm.runInContext('this.DDSuggest=' + classSrc[0], context);
@@ -134,6 +135,21 @@
   assert.strictEqual(fmt(phraseToMoment('last christmas')), '2023-12-25');
   assert.strictEqual(fmt(phraseToMoment('christmas 24')), '2024-12-25');
   assert.strictEqual(fmt(phraseToMoment('christmas of 2025')), '2025-12-25');
+
+  // holiday toggles
+  phraseToMoment.holidayGroups = { 'US Federal Holidays': false };
+  phraseToMoment.holidayOverrides = {};
+  assert.strictEqual(phraseToMoment('memorial day'), null);
+
+  phraseToMoment.holidayGroups = { 'US Federal Holidays': true };
+  phraseToMoment.holidayOverrides = { 'memorial day': false };
+  assert.strictEqual(phraseToMoment('memorial day'), null);
+
+  phraseToMoment.holidayGroups = { 'US Federal Holidays': false };
+  phraseToMoment.holidayOverrides = { 'memorial day': true };
+  assert.strictEqual(fmt(phraseToMoment('memorial day')), '2024-05-27');
+  phraseToMoment.holidayGroups = { 'US Federal Holidays': true };
+  phraseToMoment.holidayOverrides = {};
 
   /* ------------------------------------------------------------------ */
   /* onTrigger guard rails                                             */
@@ -310,6 +326,17 @@
     null
   );
   assert.ok(trig && trig.start.ch === 0);
+
+  const hPlugin = new DynamicDates();
+  hPlugin.settings = Object.assign({}, plugin.settings, {
+    holidayGroups: { 'US Federal Holidays': true },
+    holidayOverrides: { 'mlk day': false }
+  });
+  hPlugin.refreshHolidayMap();
+  assert.ok(!hPlugin.allPhrases().includes('mlk day'));
+  hPlugin.settings.holidayOverrides['mlk day'] = true;
+  hPlugin.refreshHolidayMap();
+  assert.ok(hPlugin.allPhrases().includes('mlk day'));
 
   console.log('All tests passed');
 })();

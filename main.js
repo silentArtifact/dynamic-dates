@@ -1,11 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 const obsidian_1 = require("obsidian");
-const DEFAULT_SETTINGS = {
-    acceptKey: "Tab",
-    noAliasWithShift: false,
-    customDates: {},
-};
 /* ------------------------------------------------------------------ */
 /* Phrase helpers                                                     */
 /* ------------------------------------------------------------------ */
@@ -44,23 +39,57 @@ const MONTHS = [
     "november",
     "december",
 ];
-const HOLIDAY_PHRASES = [
-    "new year's day",
-    "mlk day",
-    "martin luther king jr day",
-    "presidents day",
-    "memorial day",
-    "juneteenth",
-    "independence day",
-    "labor day",
-    "columbus day",
-    "veterans day",
-    "thanksgiving",
-    "thanksgiving day",
-    "christmas",
-    "christmas day",
-];
+function nthWeekdayOfMonth(year, month, weekday, n) {
+    const first = (0, obsidian_1.moment)(new Date(year, month, 1));
+    const diff = (weekday - first.weekday() + 7) % 7;
+    return first.add(diff + (n - 1) * 7, "day");
+}
+function lastWeekdayOfMonth(year, month, weekday) {
+    const last = (0, obsidian_1.moment)(new Date(year, month + 1, 1)).subtract(1, "day");
+    const diff = (last.weekday() - weekday + 7) % 7;
+    return last.subtract(diff, "day");
+}
+const HOLIDAYS = {
+    "new year's day": { group: "US Federal Holidays", calc: (y) => (0, obsidian_1.moment)(new Date(y, 0, 1)) },
+    "mlk day": { group: "US Federal Holidays", calc: (y) => nthWeekdayOfMonth(y, 0, 1, 3) },
+    "martin luther king jr day": { group: "US Federal Holidays", calc: (y) => nthWeekdayOfMonth(y, 0, 1, 3) },
+    "presidents day": { group: "US Federal Holidays", calc: (y) => nthWeekdayOfMonth(y, 1, 1, 3) },
+    "memorial day": { group: "US Federal Holidays", calc: (y) => lastWeekdayOfMonth(y, 4, 1) },
+    "juneteenth": { group: "US Federal Holidays", calc: (y) => (0, obsidian_1.moment)(new Date(y, 5, 19)) },
+    "independence day": { group: "US Federal Holidays", calc: (y) => (0, obsidian_1.moment)(new Date(y, 6, 4)) },
+    "labor day": { group: "US Federal Holidays", calc: (y) => nthWeekdayOfMonth(y, 8, 1, 1) },
+    "columbus day": { group: "US Federal Holidays", calc: (y) => nthWeekdayOfMonth(y, 9, 1, 2) },
+    "veterans day": { group: "US Federal Holidays", calc: (y) => (0, obsidian_1.moment)(new Date(y, 10, 11)) },
+    "thanksgiving": { group: "US Federal Holidays", calc: (y) => nthWeekdayOfMonth(y, 10, 4, 4) },
+    "thanksgiving day": { group: "US Federal Holidays", calc: (y) => nthWeekdayOfMonth(y, 10, 4, 4) },
+    "christmas": { group: "US Federal Holidays", calc: (y) => (0, obsidian_1.moment)(new Date(y, 11, 25)) },
+    "christmas day": { group: "US Federal Holidays", calc: (y) => (0, obsidian_1.moment)(new Date(y, 11, 25)) },
+};
+const GROUP_HOLIDAYS = {};
+for (const [name, def] of Object.entries(HOLIDAYS)) {
+    if (!GROUP_HOLIDAYS[def.group])
+        GROUP_HOLIDAYS[def.group] = [];
+    GROUP_HOLIDAYS[def.group].push(name);
+}
+const HOLIDAY_PHRASES = Object.keys(HOLIDAYS);
 const HOLIDAY_WORDS = Array.from(new Set(HOLIDAY_PHRASES.flatMap((p) => p.split(/\s+/).map((w) => w.toLowerCase()))));
+function holidayEnabled(name) {
+    const overrides = phraseToMoment.holidayOverrides || {};
+    if (name in overrides)
+        return overrides[name];
+    const groups = phraseToMoment.holidayGroups || {};
+    const g = HOLIDAYS[name]?.group;
+    if (g && g in groups)
+        return groups[g];
+    return true;
+}
+const DEFAULT_SETTINGS = {
+    acceptKey: "Tab",
+    noAliasWithShift: false,
+    customDates: {},
+    holidayGroups: Object.fromEntries(Object.keys(GROUP_HOLIDAYS).map(g => [g, true])),
+    holidayOverrides: {},
+};
 function isProperNoun(word) {
     const w = word.toLowerCase();
     return (WEEKDAYS.includes(w) ||
@@ -89,32 +118,6 @@ const PHRASES = BASE_WORDS.flatMap((w) => WEEKDAYS.includes(w) ? [w, `last ${w}`
 function phraseToMoment(phrase) {
     const now = (0, obsidian_1.moment)();
     const lower = phrase.toLowerCase().trim();
-    const nthWeekdayOfMonth = (year, month, weekday, n) => {
-        const first = (0, obsidian_1.moment)(new Date(year, month, 1));
-        const diff = (weekday - first.weekday() + 7) % 7;
-        return first.add(diff + (n - 1) * 7, "day");
-    };
-    const lastWeekdayOfMonth = (year, month, weekday) => {
-        const last = (0, obsidian_1.moment)(new Date(year, month + 1, 1)).subtract(1, "day");
-        const diff = (last.weekday() - weekday + 7) % 7;
-        return last.subtract(diff, "day");
-    };
-    const HOLIDAYS = {
-        "new year's day": (y) => (0, obsidian_1.moment)(new Date(y, 0, 1)),
-        "mlk day": (y) => nthWeekdayOfMonth(y, 0, 1, 3),
-        "martin luther king jr day": (y) => nthWeekdayOfMonth(y, 0, 1, 3),
-        "presidents day": (y) => nthWeekdayOfMonth(y, 1, 1, 3),
-        "memorial day": (y) => lastWeekdayOfMonth(y, 4, 1),
-        "juneteenth": (y) => (0, obsidian_1.moment)(new Date(y, 5, 19)),
-        "independence day": (y) => (0, obsidian_1.moment)(new Date(y, 6, 4)),
-        "labor day": (y) => nthWeekdayOfMonth(y, 8, 1, 1),
-        "columbus day": (y) => nthWeekdayOfMonth(y, 9, 1, 2),
-        "veterans day": (y) => (0, obsidian_1.moment)(new Date(y, 10, 11)),
-        "thanksgiving": (y) => nthWeekdayOfMonth(y, 10, 4, 4),
-        "thanksgiving day": (y) => nthWeekdayOfMonth(y, 10, 4, 4),
-        "christmas": (y) => (0, obsidian_1.moment)(new Date(y, 11, 25)),
-        "christmas day": (y) => (0, obsidian_1.moment)(new Date(y, 11, 25)),
-    };
     const customMap = phraseToMoment.customDates || {};
     if (lower in customMap) {
         const val = customMap[lower];
@@ -126,7 +129,10 @@ function phraseToMoment(phrase) {
             return m;
         }
     }
-    for (const [name, calc] of Object.entries(HOLIDAYS)) {
+    for (const [name, def] of Object.entries(HOLIDAYS)) {
+        if (!holidayEnabled(name))
+            continue;
+        const calc = def.calc;
         if (lower === name) {
             let m = calc(now.year());
             if (m.isBefore(now, "day"))
@@ -495,6 +501,10 @@ class DDSuggest extends obsidian_1.EditorSuggest {
 class DynamicDates extends obsidian_1.Plugin {
     settings = DEFAULT_SETTINGS;
     customMap = {};
+    refreshHolidayMap() {
+        phraseToMoment.holidayGroups = { ...this.settings.holidayGroups };
+        phraseToMoment.holidayOverrides = { ...this.settings.holidayOverrides };
+    }
     refreshCustomMap() {
         this.customMap = {};
         for (const key of Object.keys(this.settings.customDates || {})) {
@@ -521,7 +531,20 @@ class DynamicDates extends obsidian_1.Plugin {
         return daily?.format || "YYYY-MM-DD";
     }
     allPhrases() {
-        return [...PHRASES, ...Object.keys(this.settings.customDates || {}).map(p => p.toLowerCase())];
+        const holidays = HOLIDAY_PHRASES.filter(p => this.isHolidayEnabled(p));
+        return [
+            ...BASE_WORDS.flatMap(w => WEEKDAYS.includes(w) ? [w, `last ${w}`, `next ${w}`] : [w]),
+            ...holidays,
+            ...Object.keys(this.settings.customDates || {}).map(p => p.toLowerCase()),
+        ];
+    }
+    isHolidayEnabled(name) {
+        const override = this.settings.holidayOverrides?.[name];
+        if (typeof override === 'boolean')
+            return override;
+        const g = HOLIDAYS[name]?.group;
+        const grp = this.settings.holidayGroups?.[g];
+        return grp !== false;
     }
     /** Return the canonical form for a custom phrase, if any. */
     customCanonical(lower) {
@@ -552,11 +575,17 @@ class DynamicDates extends obsidian_1.Plugin {
         this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
         if (!this.settings.customDates)
             this.settings.customDates = {};
+        if (!this.settings.holidayGroups)
+            this.settings.holidayGroups = Object.fromEntries(Object.keys(GROUP_HOLIDAYS).map(g => [g, true]));
+        if (!this.settings.holidayOverrides)
+            this.settings.holidayOverrides = {};
         this.refreshCustomMap();
+        this.refreshHolidayMap();
     }
     async saveSettings() {
         await this.saveData(this.settings);
         this.refreshCustomMap();
+        this.refreshHolidayMap();
     }
     linkForPhrase(phrase) {
         const m = phraseToMoment(phrase);
@@ -618,6 +647,25 @@ class DDSettingTab extends obsidian_1.PluginSettingTab {
             this.plugin.settings.noAliasWithShift = v;
             await this.plugin.saveSettings();
         }));
+        containerEl.createEl("h3", { text: "Holiday groups" });
+        Object.entries(GROUP_HOLIDAYS).forEach(([g, list]) => {
+            new obsidian_1.Setting(containerEl)
+                .setName(g)
+                .addToggle(t => t.setValue(this.plugin.settings.holidayGroups[g] ?? true)
+                .onChange(async (v) => {
+                this.plugin.settings.holidayGroups[g] = v;
+                await this.plugin.saveSettings();
+            }));
+            list.forEach(h => {
+                new obsidian_1.Setting(containerEl)
+                    .setDesc(h)
+                    .addToggle(t => t.setValue(this.plugin.settings.holidayOverrides[h] ?? true)
+                    .onChange(async (v) => {
+                    this.plugin.settings.holidayOverrides[h] = v;
+                    await this.plugin.saveSettings();
+                }));
+            });
+        });
         containerEl.createEl("h3", { text: "Custom date mappings" });
         new obsidian_1.Setting(containerEl)
             .setDesc("Map phrases to fixed dates, e.g. 'Mid Year' → '06-01'")
