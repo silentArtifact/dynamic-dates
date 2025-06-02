@@ -18,21 +18,17 @@ import {
 
 interface DDSettings {
         dateFormat: string;
-        autoCreate: boolean;
         acceptKey: "Enter" | "Tab";
         noAliasWithShift: boolean;
         aliasFormat: "capitalize" | "keep" | "date";
-        openOnCreate: boolean;
         customDates: Record<string, string>;
 }
 
 const DEFAULT_SETTINGS: DDSettings = {
         dateFormat: "YYYY-MM-DD",
-        autoCreate: false,
         acceptKey: "Tab",
         noAliasWithShift: false,
         aliasFormat: "capitalize",
-        openOnCreate: false,
         customDates: {},
 };
 
@@ -360,53 +356,6 @@ class DDSuggest extends EditorSuggest<string> {
                         end,
                 );
 	
-		/* ----------------------------------------------------------------
-		   4. Optional auto-create note
-		----------------------------------------------------------------- */
-                if (
-                        settings.autoCreate &&
-                        !this.app.vault.getAbstractFileByPath(linkPath + ".md")
-                ) {
-                        const target = linkPath + ".md";
-                        const folder = this.plugin.getDailyFolder().trim();
-                        (async () => {
-                                const dailyPlugin = (this.app as any).internalPlugins?.plugins?.["daily-notes"]?.instance;
-                                if (dailyPlugin?.createDailyNote) {
-                                        const dt = moment(targetDate, "YYYY-MM-DD");
-                                        await dailyPlugin.createDailyNote(dt);
-                                        if (settings.openOnCreate && this.app.workspace?.openLinkText) {
-                                                this.app.workspace.openLinkText(target, "", false);
-                                        }
-                                        return;
-                                }
-                                if (
-                                        folder &&
-                                        !this.app.vault.getAbstractFileByPath(folder)
-                                ) {
-                                        await this.app.vault.createFolder(folder);
-                                }
-                                let tpl = "";
-                                const daily = this.plugin.getDailySettings();
-                                if (daily?.template) {
-                                        const f = this.app.vault.getAbstractFileByPath(daily.template);
-                                        if (f) tpl = await this.app.vault.read(f as TFile);
-                                        const templates = (this.app as any).internalPlugins?.plugins?.["templates"]?.instance;
-                                        if (templates) {
-                                                try {
-                                                        if (typeof templates.parseTemplate === "function") {
-                                                                tpl = await templates.parseTemplate(tpl);
-                                                        } else if (typeof templates.replaceTemplates === "function") {
-                                                                tpl = await templates.replaceTemplates(tpl);
-                                                        }
-                                                } catch {}
-                                        }
-                                }
-                                await this.app.vault.create(target, tpl);
-                                if (settings.openOnCreate && this.app.workspace?.openLinkText) {
-                                        this.app.workspace.openLinkText(target, "", false);
-                                }
-                        })();
-                }
 	
 		this.close();
 	}
@@ -548,26 +497,6 @@ class DDSettingTab extends PluginSettingTab {
 
 
                 new Setting(containerEl)
-                        .setName("Create note if missing")
-                        .addToggle((t) =>
-                                t
-                                        .setValue(this.plugin.settings.autoCreate)
-                                        .onChange(async (v: boolean) => {
-                                                this.plugin.settings.autoCreate = v;
-                                                await this.plugin.saveSettings();
-                                        }),
-                        );
-
-                new Setting(containerEl)
-                        .setName("Open note on creation")
-                        .addToggle((t) =>
-                                t
-                                        .setValue(this.plugin.settings.openOnCreate)
-                                        .onChange(async (v: boolean) => {
-                                                this.plugin.settings.openOnCreate = v;
-                                                await this.plugin.saveSettings();
-                                        }),
-                        );
 
 
                 new Setting(containerEl)

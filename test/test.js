@@ -117,7 +117,7 @@
   /* ------------------------------------------------------------------ */
   /* onTrigger guard rails                                             */
   /* ------------------------------------------------------------------ */
-  const plugin = { settings: { dateFormat: 'YYYY-MM-DD', autoCreate: false, acceptKey:'Tab', noAliasWithShift: true, aliasFormat:'capitalize', openOnCreate:false }, dailyFolder:'', allPhrases: () => PHRASES, getDailyFolder(){ return this.dailyFolder; }, getDailySettings(){ return { folder:this.dailyFolder, template:'tpl.md', format:'YYYY-MM-DD' }; }, customCanonical(){ return null; } };
+  const plugin = { settings: { dateFormat: 'YYYY-MM-DD', acceptKey:'Tab', noAliasWithShift: true, aliasFormat:'capitalize' }, dailyFolder:'', allPhrases: () => PHRASES, getDailyFolder(){ return this.dailyFolder; }, getDailySettings(){ return { folder:this.dailyFolder, template:'tpl.md', format:'YYYY-MM-DD' }; }, customCanonical(){ return null; } };
   const app = { vault: {} };
   const sugg = new DDSuggest(app, plugin);
 
@@ -159,74 +159,6 @@
   sugg.selectSuggestion('2024-05-02', new KeyboardEvent({ shiftKey:false, key:'Tab' }));
   assert.strictEqual(inserted.pop(), '[[2024-05-02|Last Thursday]]');
 
-  /* ------------------------------------------------------------------ */
-  /* auto-create daily note                                            */
-  /* ------------------------------------------------------------------ */
-  plugin.settings.autoCreate = true;
-  plugin.dailyFolder = 'Daily';
-  plugin.settings.openOnCreate = true;
-  const calls = [];
-  app.vault = {
-    getAbstractFileByPath: (p) => {
-      calls.push(['check', p]);
-      if (p === 'tpl.md') return { path: p };
-      return null;
-    },
-    read: (f) => { calls.push(['read', f.path]); return '# hello'; },
-    createFolder: (p) => { calls.push(['mkdir', p]); return { then: r => r() }; },
-    create: (p, d) => { calls.push(['create', p, d]); return { then: r => r() }; },
-  };
-  app.internalPlugins = { plugins: {
-    'templates': { instance: { parseTemplate: (t) => { calls.push(['tpl', t]); return t.toUpperCase(); } } }
-  } };
-  app.workspace = { openLinkText:(p)=>calls.push(['open', p]) };
-  const ed2 = { getLine:()=>'', replaceRange:(t)=>calls.push(['insert', t]) };
-  sugg.app = app;
-  sugg.plugin = plugin;
-  sugg.context = { editor: ed2, start:{line:0,ch:0}, end:{line:0,ch:8}, query:'tomorrow' };
-  sugg.selectSuggestion('2024-05-09', new KeyboardEvent({ shiftKey:false, key:'Tab' }));
-  await new Promise(r => setTimeout(r, 0));
-  assert.deepStrictEqual(calls, [
-    ['insert', '[[Daily/2024-05-09|Tomorrow]]'],
-    ['check', 'Daily/2024-05-09.md'],
-    ['check', 'Daily'],
-    ['mkdir', 'Daily'],
-    ['check', 'tpl.md'],
-    ['read', 'tpl.md'],
-    ['tpl', '# hello'],
-    ['create', 'Daily/2024-05-09.md', '# HELLO'],
-    ['open', 'Daily/2024-05-09.md'],
-  ]);
-
-  /* ------------------------------------------------------------------ */
-  /* auto-create via daily notes plugin                                 */
-  /* ------------------------------------------------------------------ */
-  const calls2 = [];
-  plugin.settings.openOnCreate = true;
-  const dailyInst = {
-    createDailyNote: (dt) => { calls2.push(['daily', dt.format('YYYY-MM-DD')]); return { then: r => r() }; },
-    options: { folder:'Daily', template:'tpl.md', format:'YYYY-MM-DD' }
-  };
-  app.vault = {
-    getAbstractFileByPath: (p) => { calls2.push(['check', p]); return null; },
-    createFolder: () => { calls2.push(['mkdir']); return { then:r=>r() }; },
-    read: () => { calls2.push(['read']); return ''; },
-    create: () => { calls2.push(['create']); return { then:r=>r() }; },
-  };
-  app.internalPlugins = { plugins: { 'daily-notes': { instance: dailyInst } } };
-  app.workspace = { openLinkText:(p)=>calls2.push(['open', p]) };
-  const ed3 = { getLine:()=>'', replaceRange:(t)=>calls2.push(['insert', t]) };
-  sugg.app = app;
-  sugg.plugin = plugin;
-  sugg.context = { editor: ed3, start:{line:0,ch:0}, end:{line:0,ch:8}, query:'tomorrow' };
-  sugg.selectSuggestion('2024-05-09', new KeyboardEvent({ shiftKey:false, key:'Tab' }));
-  await new Promise(r => setTimeout(r, 0));
-  assert.deepStrictEqual(calls2, [
-    ['insert', '[[Daily/2024-05-09|Tomorrow]]'],
-    ['check', 'Daily/2024-05-09.md'],
-    ['daily', '2024-05-09'],
-    ['open', 'Daily/2024-05-09.md'],
-  ]);
 
   /* ------------------------------------------------------------------ */
   /* convertText utility                                               */
@@ -265,7 +197,7 @@
   /* ------------------------------------------------------------------ */
   /* onTrigger additional guard rails                                   */
   /* ------------------------------------------------------------------ */
-  const tPlugin = { settings: Object.assign({}, plugin.settings, { autoCreate: false }), dailyFolder:'Daily', allPhrases: () => PHRASES, getDailyFolder(){ return this.dailyFolder; }, getDailySettings(){ return { folder:this.dailyFolder, template:'tpl.md', format:'YYYY-MM-DD' }; }, customCanonical(){ return null; } };
+  const tPlugin = { settings: Object.assign({}, plugin.settings), dailyFolder:'Daily', allPhrases: () => PHRASES, getDailyFolder(){ return this.dailyFolder; }, getDailySettings(){ return { folder:this.dailyFolder, template:'tpl.md', format:'YYYY-MM-DD' }; }, customCanonical(){ return null; } };
   const tApp = { vault:{}, workspace:{} };
   const tSugg = new DDSuggest(tApp, tPlugin);
   assert.strictEqual(tSugg.onTrigger({line:0,ch:4}, { getLine:()=> 'next' }, null), null);
