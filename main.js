@@ -58,7 +58,23 @@ function needsYearAlias(phrase) {
     }
     return /^(jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:tember)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)\s+\d{1,2}(?:st|nd|rd|th)?(?:,)?\s*\d{2,4}$/.test(lower);
 }
-const PHRASES = BASE_WORDS.flatMap((w) => WEEKDAYS.includes(w) ? [w, `last ${w}`, `next ${w}`] : [w]);
+const HOLIDAY_PHRASES = [
+    "new year's day",
+    "mlk day",
+    "martin luther king jr day",
+    "presidents day",
+    "memorial day",
+    "juneteenth",
+    "independence day",
+    "labor day",
+    "columbus day",
+    "veterans day",
+    "thanksgiving",
+    "thanksgiving day",
+    "christmas",
+    "christmas day",
+];
+const PHRASES = BASE_WORDS.flatMap((w) => WEEKDAYS.includes(w) ? [w, `last ${w}`, `next ${w}`] : [w]).concat(HOLIDAY_PHRASES);
 /**
  * Convert a natural-language phrase into a moment date instance.
  *
@@ -70,6 +86,32 @@ const PHRASES = BASE_WORDS.flatMap((w) => WEEKDAYS.includes(w) ? [w, `last ${w}`
 function phraseToMoment(phrase) {
     const now = (0, obsidian_1.moment)();
     const lower = phrase.toLowerCase().trim();
+    const nthWeekdayOfMonth = (year, month, weekday, n) => {
+        const first = (0, obsidian_1.moment)(new Date(year, month, 1));
+        const diff = (weekday - first.weekday() + 7) % 7;
+        return first.add(diff + (n - 1) * 7, "day");
+    };
+    const lastWeekdayOfMonth = (year, month, weekday) => {
+        const last = (0, obsidian_1.moment)(new Date(year, month + 1, 1)).subtract(1, "day");
+        const diff = (last.weekday() - weekday + 7) % 7;
+        return last.subtract(diff, "day");
+    };
+    const HOLIDAYS = {
+        "new year's day": (y) => (0, obsidian_1.moment)(new Date(y, 0, 1)),
+        "mlk day": (y) => nthWeekdayOfMonth(y, 0, 1, 3),
+        "martin luther king jr day": (y) => nthWeekdayOfMonth(y, 0, 1, 3),
+        "presidents day": (y) => nthWeekdayOfMonth(y, 1, 1, 3),
+        "memorial day": (y) => lastWeekdayOfMonth(y, 4, 1),
+        "juneteenth": (y) => (0, obsidian_1.moment)(new Date(y, 5, 19)),
+        "independence day": (y) => (0, obsidian_1.moment)(new Date(y, 6, 4)),
+        "labor day": (y) => nthWeekdayOfMonth(y, 8, 1, 1),
+        "columbus day": (y) => nthWeekdayOfMonth(y, 9, 1, 2),
+        "veterans day": (y) => (0, obsidian_1.moment)(new Date(y, 10, 11)),
+        "thanksgiving": (y) => nthWeekdayOfMonth(y, 10, 4, 4),
+        "thanksgiving day": (y) => nthWeekdayOfMonth(y, 10, 4, 4),
+        "christmas": (y) => (0, obsidian_1.moment)(new Date(y, 11, 25)),
+        "christmas day": (y) => (0, obsidian_1.moment)(new Date(y, 11, 25)),
+    };
     const customMap = phraseToMoment.customDates || {};
     if (lower in customMap) {
         const val = customMap[lower];
@@ -80,6 +122,13 @@ function phraseToMoment(phrase) {
                 m.add(1, "year");
             return m;
         }
+    }
+    if (lower in HOLIDAYS) {
+        const calc = HOLIDAYS[lower];
+        let m = calc(now.year());
+        if (m.isBefore(now, "day"))
+            m = calc(now.year() + 1);
+        return m;
     }
     if (lower === "today")
         return now;

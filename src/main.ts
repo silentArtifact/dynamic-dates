@@ -89,9 +89,25 @@ function needsYearAlias(phrase: string): boolean {
         return /^(jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:tember)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)\s+\d{1,2}(?:st|nd|rd|th)?(?:,)?\s*\d{2,4}$/.test(lower);
 }
 
+const HOLIDAY_PHRASES = [
+        "new year's day",
+        "mlk day",
+        "martin luther king jr day",
+        "presidents day",
+        "memorial day",
+        "juneteenth",
+        "independence day",
+        "labor day",
+        "columbus day",
+        "veterans day",
+        "thanksgiving",
+        "thanksgiving day",
+        "christmas",
+        "christmas day",
+];
 const PHRASES = BASE_WORDS.flatMap((w) =>
         WEEKDAYS.includes(w) ? [w, `last ${w}`, `next ${w}`] : [w],
-);
+).concat(HOLIDAY_PHRASES);
 
 
 /**
@@ -106,6 +122,33 @@ function phraseToMoment(phrase: string): moment.Moment | null {
         const now = moment();
         const lower = phrase.toLowerCase().trim();
 
+        const nthWeekdayOfMonth = (year: number, month: number, weekday: number, n: number) => {
+                const first = moment(new Date(year, month, 1));
+                const diff = (weekday - first.weekday() + 7) % 7;
+                return first.add(diff + (n - 1) * 7, "day");
+        };
+        const lastWeekdayOfMonth = (year: number, month: number, weekday: number) => {
+                const last = moment(new Date(year, month + 1, 1)).subtract(1, "day");
+                const diff = (last.weekday() - weekday + 7) % 7;
+                return last.subtract(diff, "day");
+        };
+        const HOLIDAYS: Record<string, (y: number) => moment.Moment> = {
+                "new year's day": (y) => moment(new Date(y, 0, 1)),
+                "mlk day": (y) => nthWeekdayOfMonth(y, 0, 1, 3),
+                "martin luther king jr day": (y) => nthWeekdayOfMonth(y, 0, 1, 3),
+                "presidents day": (y) => nthWeekdayOfMonth(y, 1, 1, 3),
+                "memorial day": (y) => lastWeekdayOfMonth(y, 4, 1),
+                "juneteenth": (y) => moment(new Date(y, 5, 19)),
+                "independence day": (y) => moment(new Date(y, 6, 4)),
+                "labor day": (y) => nthWeekdayOfMonth(y, 8, 1, 1),
+                "columbus day": (y) => nthWeekdayOfMonth(y, 9, 1, 2),
+                "veterans day": (y) => moment(new Date(y, 10, 11)),
+                "thanksgiving": (y) => nthWeekdayOfMonth(y, 10, 4, 4),
+                "thanksgiving day": (y) => nthWeekdayOfMonth(y, 10, 4, 4),
+                "christmas": (y) => moment(new Date(y, 11, 25)),
+                "christmas day": (y) => moment(new Date(y, 11, 25)),
+        };
+
         const customMap: Record<string,string> = (phraseToMoment as any).customDates || {};
         if (lower in customMap) {
                 const val = customMap[lower];
@@ -115,6 +158,13 @@ function phraseToMoment(phrase: string): moment.Moment | null {
                         if (m.isBefore(now, "day")) m.add(1, "year");
                         return m;
                 }
+        }
+
+        if (lower in HOLIDAYS) {
+                const calc = HOLIDAYS[lower];
+                let m = calc(now.year());
+                if (m.isBefore(now, "day")) m = calc(now.year() + 1);
+                return m;
         }
 
         if (lower === "today") return now;
