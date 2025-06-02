@@ -32,6 +32,27 @@ const WEEKDAYS = [
     "friday",
     "saturday",
 ];
+const MONTHS = [
+    "january",
+    "february",
+    "march",
+    "april",
+    "may",
+    "june",
+    "july",
+    "august",
+    "september",
+    "october",
+    "november",
+    "december",
+];
+function isProperNoun(word) {
+    const w = word.toLowerCase();
+    return WEEKDAYS.includes(w) || MONTHS.includes(w);
+}
+function properCase(word) {
+    return word.charAt(0).toUpperCase() + word.slice(1).toLowerCase();
+}
 const PHRASES = BASE_WORDS.flatMap((w) => WEEKDAYS.includes(w) ? [w, `last ${w}`, `next ${w}`] : [w]);
 /**
  * Convert a natural-language phrase into a moment date instance.
@@ -263,10 +284,13 @@ class DDSuggest extends obsidian_1.EditorSuggest {
                         const t = typedWords[i];
                         if (t &&
                             t.length === w.length &&
-                            t.toLowerCase() === w.toLowerCase() &&
-                            ["last", "next"].includes(w.toLowerCase())) {
-                            return t;
+                            t.toLowerCase() === w.toLowerCase()) {
+                            return isProperNoun(w) ? properCase(w) : t;
                         }
+                        if (isProperNoun(w))
+                            return properCase(w);
+                        if (["last", "next"].includes(w.toLowerCase()) && t)
+                            return t;
                         return w.replace(/\b\w/g, ch => ch.toUpperCase());
                     })
                         .join(" ");
@@ -385,7 +409,10 @@ class DynamicDates extends obsidian_1.Plugin {
             alias = m.format("MMMM Do");
         }
         else {
-            alias = phrase.replace(/\b\w/g, (ch) => ch.toUpperCase());
+            alias = phrase
+                .split(/\s+/)
+                .map((w) => (isProperNoun(w) ? properCase(w) : w))
+                .join(" ");
         }
         const folder = this.getDailyFolder();
         const linkPath = (folder ? folder + "/" : "") + value;
@@ -396,7 +423,7 @@ class DynamicDates extends obsidian_1.Plugin {
         for (const p of phrases) {
             const esc = p.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
             const re = new RegExp(`\\b${esc}\\b`, "gi");
-            text = text.replace(re, (m) => this.linkForPhrase(m.toLowerCase()) ?? m);
+            text = text.replace(re, (m) => this.linkForPhrase(m) ?? m);
         }
         return text;
     }

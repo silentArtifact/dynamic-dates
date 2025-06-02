@@ -12,14 +12,17 @@
   if (!pluginSrc) throw new Error('DynamicDates class not found');
   const settingsSrc = code.match(/const DEFAULT_SETTINGS =[^]*?};/);
   if (!settingsSrc) throw new Error('DEFAULT_SETTINGS not found');
+  const helpersSrc = code.match(/function isProperNoun[^]*?}\nfunction properCase[^]*?\}/);
+  if (!helpersSrc) throw new Error('helper functions not found');
 
   /* ------------------------------------------------------------------ */
   /* Minimal runtime stubs                                              */
   /* ------------------------------------------------------------------ */
-  const MONTHS = {
+  const MONTH_INDEX = {
     january: 0, february: 1, march: 2, april: 3, may: 4, june: 5,
     july: 6, august: 7, september: 8, october: 9, november: 10, december: 11,
   };
+  const MONTHS = ['january','february','march','april','may','june','july','august','september','october','november','december'];
   class Moment {
     constructor(date) { this.d = new Date(date); this._setDay = null; }
     clone() { const m = new Moment(this.d); m._setDay = this._setDay; return m; }
@@ -37,7 +40,7 @@
     }
     year(y) { if (y == null) return this.d.getFullYear(); this.d.setFullYear(y); return this; }
     weekday() { return this.d.getDay(); }
-    month(name) { this.d.setMonth(MONTHS[name.toLowerCase()]); return this; }
+    month(name) { this.d.setMonth(MONTH_INDEX[name.toLowerCase()]); return this; }
     date(n) { if (n == null) return this.d.getDate(); this._setDay = n; this.d.setDate(n); return this; }
     isValid() { return !isNaN(this.d) && (this._setDay == null || this.d.getDate() === this._setDay); }
     isBefore(other, unit) {
@@ -81,8 +84,9 @@
   const PHRASES = BASE_WORDS.flatMap(w => WEEKDAYS.includes(w) ? [w, `last ${w}`, `next ${w}`] : [w]);
 
   const obsidian_1 = { moment, EditorSuggest, KeyboardEvent, Plugin, PluginSettingTab, Setting };
-  const context = { moment, WEEKDAYS, BASE_WORDS, PHRASES, EditorSuggest, KeyboardEvent, Plugin, PluginSettingTab, Setting, obsidian_1 };
+  const context = { moment, WEEKDAYS, MONTHS, BASE_WORDS, PHRASES, EditorSuggest, KeyboardEvent, Plugin, PluginSettingTab, Setting, obsidian_1 };
   vm.createContext(context);
+  vm.runInContext(helpersSrc[0], context);
   vm.runInContext(funcSrc[0], context);
   vm.runInContext(settingsSrc[0], context);
   vm.runInContext('this.DDSuggest=' + classSrc[0], context);
@@ -149,6 +153,11 @@
 
   plugin.settings.aliasFormat = 'capitalize';
 
+  // preserve typed casing for non-proper words
+  sugg.context = { editor, start:{line:0,ch:0}, end:{line:0,ch:8}, query:'tomorrow' };
+  sugg.selectSuggestion('2024-05-09', new KeyboardEvent({ shiftKey:false, key:'Tab' }));
+  assert.strictEqual(inserted.pop(), '[[2024-05-09|tomorrow]]');
+
   // ensure qualifiers remain lowercase
   sugg.context = { editor, start:{line:0,ch:0}, end:{line:0,ch:8}, query:'last thu' };
   sugg.selectSuggestion('2024-05-02', new KeyboardEvent({ shiftKey:false, key:'Tab' }));
@@ -175,7 +184,7 @@
   const lf = new DynamicDates();
   lf.settings = Object.assign({}, plugin.settings);
   lf.getDailyFolder = () => 'Journal';
-  assert.strictEqual(lf.linkForPhrase('tomorrow'), '[[Journal/2024-05-09|Tomorrow]]');
+  assert.strictEqual(lf.linkForPhrase('tomorrow'), '[[Journal/2024-05-09|tomorrow]]');
   lf.settings.aliasFormat = 'keep';
   assert.strictEqual(lf.linkForPhrase('tomorrow'), '[[Journal/2024-05-09|tomorrow]]');
   lf.settings.aliasFormat = 'date';
