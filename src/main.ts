@@ -85,7 +85,10 @@ function properCase(word: string): string {
 
 function needsYearAlias(phrase: string): boolean {
         const lower = phrase.toLowerCase().trim();
-        return /^(?:last|next)\s+(jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:tember)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)\s+\d{1,2}(?:st|nd|rd|th)?$/.test(lower);
+        if (/^(?:last|next)\s+(jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:tember)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)\s+\d{1,2}(?:st|nd|rd|th)?$/.test(lower)) {
+                return true;
+        }
+        return /^(jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:tember)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)\s+\d{1,2}(?:st|nd|rd|th)?(?:,)?\s*\d{2,4}$/.test(lower);
 }
 
 const PHRASES = BASE_WORDS.flatMap((w) =>
@@ -129,6 +132,24 @@ function phraseToMoment(phrase: string): moment.Moment | null {
         if (ago) {
                 const n = parseInt(ago[1]);
                 if (!isNaN(n)) return now.clone().subtract(n * (ago[2].startsWith('week') ? 7 : 1), "day");
+        }
+
+        const mdy = lower.match(/^(jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:tember)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)\s+(\d{1,2})(?:st|nd|rd|th)?(?:,)?\s*(\d{2,4})$/i);
+        if (mdy) {
+                let monthName = mdy[1];
+                if (monthName.length <= 3) {
+                        const idx = ["jan","feb","mar","apr","may","jun","jul","aug","sep","oct","nov","dec"].indexOf(monthName.slice(0,3));
+                        monthName = ["january","february","march","april","may","june","july","august","september","october","november","december"][idx];
+                }
+                const dayNum = parseInt(mdy[2]);
+                let yearNum = parseInt(mdy[3]);
+                if (!isNaN(dayNum) && !isNaN(yearNum)) {
+                        if (yearNum < 100) yearNum += 2000;
+                        const idx = MONTHS.indexOf(monthName.toLowerCase());
+                        const target = moment(new Date(yearNum, idx, dayNum));
+                        if (!target.isValid()) return null;
+                        return target;
+                }
         }
 
         const lastMd = lower.match(/^last\s+(jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:tember)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)\s+(\d{1,2}\w*)$/i);
