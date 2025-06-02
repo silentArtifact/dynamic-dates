@@ -21,14 +21,12 @@ interface DDSettings {
         dateFormat?: string;
         acceptKey: "Enter" | "Tab";
         noAliasWithShift: boolean;
-        aliasFormat: "capitalize" | "keep" | "date";
         customDates: Record<string, string>;
 }
 
 const DEFAULT_SETTINGS: DDSettings = {
         acceptKey: "Tab",
         noAliasWithShift: false,
-        aliasFormat: "capitalize",
         customDates: {},
 };
 
@@ -327,53 +325,45 @@ class DDSuggest extends EditorSuggest<string> {
                         phrase = candidates.sort((a, b) => a.length - b.length)[0];
                 }
 
-                const settings = this.plugin.settings;
+
                 const custom = this.plugin.customCanonical(phrase);
                 let alias: string;
 
-                if (settings.aliasFormat === "keep") {
-                        alias = custom || query;
-                } else if (settings.aliasFormat === "date") {
+                if (candidates.length) {
+                        phrase = candidates.sort((a, b) => a.length - b.length)[0];
+                        const canonical = this.plugin.customCanonical(phrase);
+                        if (canonical) {
+                                alias = canonical;
+                        } else {
+                                const typedWords = query.split(/\s+/);
+                                const phraseWords = phrase.split(/\s+/);
+                                alias = phraseWords
+                                        .map((w, i) => {
+                                                const t = typedWords[i];
+                                                if (t) {
+                                                        // exact match preserves user casing
+                                                        if (t.length === w.length && t.toLowerCase() === w.toLowerCase()) {
+                                                                return isProperNoun(w) ? properCase(w) : t;
+                                                        }
+                                                        // typed prefix should keep typed characters
+                                                        if (w.toLowerCase().startsWith(t.toLowerCase())) {
+                                                                if (isProperNoun(w)) {
+                                                                        return properCase(w);
+                                                                }
+                                                                return t + w.slice(t.length);
+                                                        }
+                                                }
+                                                if (isProperNoun(w)) return properCase(w);
+                                                if (["last", "next"].includes(w.toLowerCase()) && t)
+                                                        return t;
+                                                return w.replace(/\b\w/g, ch => ch.toUpperCase());
+                                        })
+                                        .join(" ");
+                        }
+                } else {
                         const fmt = needsYearAlias(query) ? "MMMM Do, YYYY" : "MMMM Do";
                         alias = moment(target, "YYYY-MM-DD").format(fmt);
-                } else {
-                        if (candidates.length) {
-                                phrase = candidates.sort((a, b) => a.length - b.length)[0];
-                                const canonical = this.plugin.customCanonical(phrase);
-                                if (canonical) {
-                                        alias = canonical;
-                                } else {
-                                        const typedWords = query.split(/\s+/);
-                                        const phraseWords = phrase.split(/\s+/);
-                                        alias = phraseWords
-                                                .map((w, i) => {
-                                                        const t = typedWords[i];
-                                                        if (t) {
-                                                                // exact match preserves user casing
-                                                                if (t.length === w.length && t.toLowerCase() === w.toLowerCase()) {
-                                                                        return isProperNoun(w) ? properCase(w) : t;
-                                                                }
-                                                                // typed prefix should keep typed characters
-                                                                if (w.toLowerCase().startsWith(t.toLowerCase())) {
-                                                                        if (isProperNoun(w)) {
-                                                                                return properCase(w);
-                                                                        }
-                                                                        return t + w.slice(t.length);
-                                                                }
-                                                        }
-                                                        if (isProperNoun(w)) return properCase(w);
-                                                        if (["last", "next"].includes(w.toLowerCase()) && t)
-                                                                return t;
-                                                        return w.replace(/\b\w/g, ch => ch.toUpperCase());
-                                                })
-                                                .join(" ");
-                                }
-                        } else {
-                                const fmt = needsYearAlias(query) ? "MMMM Do, YYYY" : "MMMM Do";
-                                alias = moment(target, "YYYY-MM-DD").format(fmt);
-                        }
                 }
-
                 const niceDate = moment(target, "YYYY-MM-DD").format("MMMM Do, YYYY");
                 el.createDiv({ text: `${niceDate} (${alias})` });
         }
@@ -396,53 +386,48 @@ class DDSuggest extends EditorSuggest<string> {
                         phraseToMoment(p)?.format("YYYY-MM-DD") === targetDate
                 );
 
+	
                 let phrase = query.toLowerCase();
                 let alias: string;
                 const custom = this.plugin.customCanonical(phrase);
 
-                if (settings.aliasFormat === "keep") {
-                        alias = custom || query;
-                } else if (settings.aliasFormat === "date") {
+                if (custom) {
+                        alias = custom;
+                } else if (candidates.length) {
+                        phrase = candidates.sort((a, b) => a.length - b.length)[0];
+                        const canonical = this.plugin.customCanonical(phrase);
+                        if (canonical) {
+                                alias = canonical;
+                        } else {
+                                const typedWords = query.split(/\s+/);
+                                const phraseWords = phrase.split(/\s+/);
+                                alias = phraseWords
+                                        .map((w, i) => {
+                                                const t = typedWords[i];
+                                                if (t) {
+                                                        // exact match preserves user casing
+                                                        if (t.length === w.length && t.toLowerCase() === w.toLowerCase()) {
+                                                                return isProperNoun(w) ? properCase(w) : t;
+                                                        }
+                                                        // typed prefix should keep typed characters
+                                                        if (w.toLowerCase().startsWith(t.toLowerCase())) {
+                                                                if (isProperNoun(w)) {
+                                                                        return properCase(w);
+                                                                }
+                                                                return t + w.slice(t.length);
+                                                        }
+                                                }
+                                                if (isProperNoun(w)) return properCase(w);
+                                                if (["last", "next"].includes(w.toLowerCase()) && t)
+                                                        return t;
+                                                return w.replace(/\b\w/g, ch => ch.toUpperCase());
+                                        })
+                                        .join(" ");
+                        }
+                } else {
                         const fmt = needsYearAlias(query) ? "MMMM Do, YYYY" : "MMMM Do";
                         alias = moment(targetDate, "YYYY-MM-DD").format(fmt);
-                } else {
-                        if (candidates.length) {
-                                phrase = candidates.sort((a, b) => a.length - b.length)[0];
-                                const canonical = this.plugin.customCanonical(phrase);
-                                if (canonical) {
-                                        alias = canonical;
-                                } else {
-                                        const typedWords = query.split(/\s+/);
-                                        const phraseWords = phrase.split(/\s+/);
-                                        alias = phraseWords
-                                                .map((w, i) => {
-                                                        const t = typedWords[i];
-                                                        if (t) {
-                                                                // exact match preserves user casing
-                                                                if (t.length === w.length && t.toLowerCase() === w.toLowerCase()) {
-                                                                        return isProperNoun(w) ? properCase(w) : t;
-                                                                }
-                                                                // typed prefix should keep typed characters
-                                                                if (w.toLowerCase().startsWith(t.toLowerCase())) {
-                                                                        if (isProperNoun(w)) {
-                                                                                return properCase(w);
-                                                                        }
-                                                                        return t + w.slice(t.length);
-                                                                }
-                                                        }
-                                                        if (isProperNoun(w)) return properCase(w);
-                                                        if (["last", "next"].includes(w.toLowerCase()) && t)
-                                                                return t;
-                                                        return w.replace(/\b\w/g, ch => ch.toUpperCase());
-                                                })
-                                                .join(" ");
-                                }
-                        } else {
-                                const fmt = needsYearAlias(query) ? "MMMM Do, YYYY" : "MMMM Do";
-                                alias = moment(targetDate, "YYYY-MM-DD").format(fmt);
-                        }
                 }
-	
 		/* ----------------------------------------------------------------
 		   2. Build the wikilink with alias
 		----------------------------------------------------------------- */
@@ -582,11 +567,6 @@ export default class DynamicDates extends Plugin {
                 let alias: string;
                 if (custom) {
                         alias = custom;
-                } else if (this.settings.aliasFormat === "keep") {
-                        alias = phrase;
-                } else if (this.settings.aliasFormat === "date") {
-                        const fmt = needsYearAlias(phrase) ? "MMMM Do, YYYY" : "MMMM Do";
-                        alias = m.format(fmt);
                 } else {
                         alias = phrase
                                 .split(/\s+/)
@@ -640,23 +620,6 @@ class DDSettingTab extends PluginSettingTab {
                                         .setValue(this.plugin.settings.noAliasWithShift)
                                         .onChange(async (v: boolean) => {
                                                 this.plugin.settings.noAliasWithShift = v;
-                                                await this.plugin.saveSettings();
-                                        }),
-                        );
-
-                new Setting(containerEl)
-                        .setName("Alias style")
-                        .setDesc("How the alias part of links is formatted")
-                        .addDropdown((d) =>
-                                d
-                                        .addOptions({
-                                                capitalize: "Capitalize phrase",
-                                                keep: "Keep typed text",
-                                                date: "Format as date",
-                                        })
-                                        .setValue(this.plugin.settings.aliasFormat)
-                                        .onChange(async (v: string) => {
-                                                this.plugin.settings.aliasFormat = v as any;
                                                 await this.plugin.saveSettings();
                                         }),
                         );

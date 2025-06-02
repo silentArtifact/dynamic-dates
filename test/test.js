@@ -130,7 +130,7 @@
   /* ------------------------------------------------------------------ */
   /* onTrigger guard rails                                             */
   /* ------------------------------------------------------------------ */
-  const plugin = { settings: { dateFormat: 'YYYY-MM-DD', acceptKey:'Tab', noAliasWithShift: true, aliasFormat:'capitalize' }, dailyFolder:'', allPhrases: () => PHRASES, getDailyFolder(){ return this.dailyFolder; }, getDailySettings(){ return { folder:this.dailyFolder, template:'tpl.md', format:'YYYY-MM-DD' }; }, getDateFormat(){ return this.getDailySettings().format; }, customCanonical(){ return null; } };
+  const plugin = { settings: { dateFormat: 'YYYY-MM-DD', acceptKey:'Tab', noAliasWithShift: true }, dailyFolder:'', allPhrases: () => PHRASES, getDailyFolder(){ return this.dailyFolder; }, getDailySettings(){ return { folder:this.dailyFolder, template:'tpl.md', format:'YYYY-MM-DD' }; }, getDateFormat(){ return this.getDailySettings().format; }, customCanonical(){ return null; } };
   const app = { vault: {} };
   const sugg = new DDSuggest(app, plugin);
 
@@ -149,18 +149,6 @@
   sugg.context = { editor, start:{line:0,ch:0}, end:{line:0,ch:3}, query:'tom' };
   sugg.selectSuggestion('2024-05-09', new KeyboardEvent({ shiftKey:true, key:'Tab' }));
   assert.strictEqual(inserted.pop(), '[[2024-05-09]]');
-
-  plugin.settings.aliasFormat = 'keep';
-  sugg.context = { editor, start:{line:0,ch:0}, end:{line:0,ch:3}, query:'tom' };
-  sugg.selectSuggestion('2024-05-09', new KeyboardEvent({ shiftKey:false, key:'Tab' }));
-  assert.strictEqual(inserted.pop(), '[[2024-05-09|tom]]');
-
-  plugin.settings.aliasFormat = 'date';
-  sugg.context = { editor, start:{line:0,ch:0}, end:{line:0,ch:3}, query:'tom' };
-  sugg.selectSuggestion('2024-05-09', new KeyboardEvent({ shiftKey:false, key:'Tab' }));
-  assert.strictEqual(inserted.pop(), '[[2024-05-09|May 9th]]');
-
-  plugin.settings.aliasFormat = 'capitalize';
 
   // preserve typed casing for non-proper words
   sugg.context = { editor, start:{line:0,ch:0}, end:{line:0,ch:8}, query:'tomorrow' };
@@ -187,9 +175,8 @@
   /* convertText utility                                               */
   /* ------------------------------------------------------------------ */
   const inst = new DynamicDates();
-  inst.settings = Object.assign({}, plugin.settings, { aliasFormat: 'date' });
   const converted = inst.convertText('see you tomorrow');
-  assert.strictEqual(converted, 'see you [[2024-05-09|May 9th]]');
+  assert.strictEqual(converted, 'see you [[2024-05-09|tomorrow]]');
 
 
   /* ------------------------------------------------------------------ */
@@ -199,13 +186,9 @@
   lf.settings = Object.assign({}, plugin.settings);
   lf.getDailyFolder = () => 'Journal';
   assert.strictEqual(lf.linkForPhrase('tomorrow'), '[[Journal/2024-05-09|tomorrow]]');
-  lf.settings.aliasFormat = 'keep';
-  assert.strictEqual(lf.linkForPhrase('tomorrow'), '[[Journal/2024-05-09|tomorrow]]');
-  lf.settings.aliasFormat = 'date';
-  assert.strictEqual(lf.linkForPhrase('tomorrow'), '[[Journal/2024-05-09|May 9th]]');
-  assert.strictEqual(lf.linkForPhrase('last may 1'), '[[Journal/2024-05-01|May 1st, 2024]]');
-  assert.strictEqual(lf.linkForPhrase('may 1, 2023'), '[[Journal/2023-05-01|May 1st, 2023]]');
-  assert.strictEqual(lf.linkForPhrase('may 1st, 23'), '[[Journal/2023-05-01|May 1st, 2023]]');
+  assert.strictEqual(lf.linkForPhrase('last may 1'), '[[Journal/2024-05-01|last May 1]]');
+  assert.strictEqual(lf.linkForPhrase('may 1, 2023'), '[[Journal/2023-05-01|May 1, 2023]]');
+  assert.strictEqual(lf.linkForPhrase('may 1st, 23'), '[[Journal/2023-05-01|May 1st, 23]]');
   assert.strictEqual(lf.linkForPhrase('nonsense'), null);
 
   /* ------------------------------------------------------------------ */
@@ -214,11 +197,11 @@
   lf.getDailyFolder = () => '';
   const multi = lf.convertText('today and Tomorrow and next Monday');
   assert.strictEqual(multi,
-    '[[2024-05-08|May 8th]] and [[2024-05-09|May 9th]] and [[2024-05-13|May 13th]]');
+    '[[2024-05-08|today]] and [[2024-05-09|Tomorrow]] and [[2024-05-13|next [[2024-05-13|Monday]]]]');
   const noReplace = lf.convertText('see you tomorrowland');
   assert.strictEqual(noReplace, 'see you tomorrowland');
   const partial = lf.convertText('nottoday tomorrow');
-  assert.strictEqual(partial, 'nottoday [[2024-05-09|May 9th]]');
+  assert.strictEqual(partial, 'nottoday [[2024-05-09|tomorrow]]');
 
   /* ------------------------------------------------------------------ */
   /* onTrigger additional guard rails                                   */
