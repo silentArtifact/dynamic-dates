@@ -199,6 +199,36 @@
   ]);
 
   /* ------------------------------------------------------------------ */
+  /* auto-create via daily notes plugin                                 */
+  /* ------------------------------------------------------------------ */
+  const calls2 = [];
+  plugin.settings.openOnCreate = true;
+  const dailyInst = {
+    createDailyNote: (dt) => { calls2.push(['daily', dt.format('YYYY-MM-DD')]); return { then: r => r() }; },
+    options: { folder:'Daily', template:'tpl.md', format:'YYYY-MM-DD' }
+  };
+  app.vault = {
+    getAbstractFileByPath: (p) => { calls2.push(['check', p]); return null; },
+    createFolder: () => { calls2.push(['mkdir']); return { then:r=>r() }; },
+    read: () => { calls2.push(['read']); return ''; },
+    create: () => { calls2.push(['create']); return { then:r=>r() }; },
+  };
+  app.internalPlugins = { plugins: { 'daily-notes': { instance: dailyInst } } };
+  app.workspace = { openLinkText:(p)=>calls2.push(['open', p]) };
+  const ed3 = { getLine:()=>'', replaceRange:(t)=>calls2.push(['insert', t]) };
+  sugg.app = app;
+  sugg.plugin = plugin;
+  sugg.context = { editor: ed3, start:{line:0,ch:0}, end:{line:0,ch:8}, query:'tomorrow' };
+  sugg.selectSuggestion('2024-05-09', new KeyboardEvent({ shiftKey:false, key:'Tab' }));
+  await new Promise(r => setTimeout(r, 0));
+  assert.deepStrictEqual(calls2, [
+    ['insert', '[[Daily/2024-05-09|Tomorrow]]'],
+    ['check', 'Daily/2024-05-09.md'],
+    ['daily', '2024-05-09'],
+    ['open', 'Daily/2024-05-09.md'],
+  ]);
+
+  /* ------------------------------------------------------------------ */
   /* convertText utility                                               */
   /* ------------------------------------------------------------------ */
   const inst = new DynamicDates();
