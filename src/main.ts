@@ -231,6 +231,7 @@ function phraseToMoment(phrase: string): moment.Moment | null {
  */
 class DDSuggest extends EditorSuggest<string> {
         plugin: DynamicDates;
+        private _last: string[] = [];
         constructor(app: App, plugin: DynamicDates) {
                 super(app);
                 this.plugin = plugin;
@@ -297,7 +298,8 @@ class DDSuggest extends EditorSuggest<string> {
 
                 const direct = phraseToMoment(qLower);
                 if (direct) {
-                        return [direct.format(this.plugin.getDateFormat())];
+                        this._last = [direct.format(this.plugin.getDateFormat())];
+                        return this._last;
                 }
 
                 const uniq = new Set<string>();
@@ -306,7 +308,8 @@ class DDSuggest extends EditorSuggest<string> {
                         const dt = phraseToMoment(p);
                         if (dt) uniq.add(dt.format(this.plugin.getDateFormat()));
                 }
-                return [...uniq];
+                this._last = [...uniq];
+                return this._last;
         }
 
         /** Render a single entry in the suggestion dropdown. */
@@ -467,12 +470,23 @@ class DDSuggest extends EditorSuggest<string> {
                         start,
                         end,
                 );
-	
-	
-		this.close();
-	}
-	
-	
+
+
+                this.close();
+        }
+
+        onKeyDown(ev: KeyboardEvent): boolean {
+                if (ev.key === 'Tab' && this.plugin.settings.acceptKey === 'Tab' && this.context) {
+                        if (typeof ev.preventDefault === 'function') ev.preventDefault();
+                        const list = this._last;
+                        const value = list[0];
+                        if (value) this.selectSuggestion(value, ev);
+                        return true;
+                }
+                return false;
+        }
+
+
 }
 
 /* ------------------------------------------------------------------ */
@@ -529,7 +543,11 @@ export default class DynamicDates extends Plugin {
 
         async onload() {
                 await this.loadSettings();
-                this.registerEditorSuggest(new DDSuggest(this.app, this));
+                const sugg = new DDSuggest(this.app, this);
+                this.registerEditorSuggest(sugg);
+                this.registerDomEvent(document, 'keydown', (ev: KeyboardEvent) => {
+                        sugg.onKeyDown(ev);
+                });
                 this.addSettingTab(new DDSettingTab(this.app, this));
                 this.addCommand({
                         id: "convert-dates",
