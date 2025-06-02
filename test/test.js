@@ -122,6 +122,10 @@
   assert.strictEqual(fmt(phraseToMoment('jan 1')), '2025-01-01');
   assert.strictEqual(fmt(phraseToMoment('last may 1')), '2024-05-01');
   assert.strictEqual(fmt(phraseToMoment('the 24th')), '2024-05-24');
+  assert.strictEqual(fmt(phraseToMoment('may 1, 2023')), '2023-05-01');
+  assert.strictEqual(fmt(phraseToMoment('may 1st, 2023')), '2023-05-01');
+  assert.strictEqual(fmt(phraseToMoment('may 1, 23')), '2023-05-01');
+  assert.strictEqual(fmt(phraseToMoment('may 1st, 23')), '2023-05-01');
 
   /* ------------------------------------------------------------------ */
   /* onTrigger guard rails                                             */
@@ -200,6 +204,8 @@
   lf.settings.aliasFormat = 'date';
   assert.strictEqual(lf.linkForPhrase('tomorrow'), '[[Journal/2024-05-09|May 9th]]');
   assert.strictEqual(lf.linkForPhrase('last may 1'), '[[Journal/2024-05-01|May 1st, 2024]]');
+  assert.strictEqual(lf.linkForPhrase('may 1, 2023'), '[[Journal/2023-05-01|May 1st, 2023]]');
+  assert.strictEqual(lf.linkForPhrase('may 1st, 23'), '[[Journal/2023-05-01|May 1st, 2023]]');
   assert.strictEqual(lf.linkForPhrase('nonsense'), null);
 
   /* ------------------------------------------------------------------ */
