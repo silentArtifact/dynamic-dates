@@ -476,10 +476,9 @@ class DDSuggest extends EditorSuggest<string> {
         }
 
         onKeyDown(ev: KeyboardEvent): boolean {
-                if (ev.key === 'Tab' && this.plugin.settings.acceptKey === 'Tab' && this.context) {
+                if (this.context && ev.key === this.plugin.settings.acceptKey) {
                         if (typeof ev.preventDefault === 'function') ev.preventDefault();
-                        const list = this._last;
-                        const value = list[0];
+                        const value = this._last[0];
                         if (value) this.selectSuggestion(value, ev);
                         return true;
                 }
