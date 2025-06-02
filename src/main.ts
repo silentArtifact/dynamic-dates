@@ -1,16 +1,18 @@
 import {
-	App,
-	Editor,
-	EditorPosition,
-	EditorSuggest,
-	EditorSuggestContext,
-	EditorSuggestTriggerInfo,
-	moment,
-	Plugin,
-	PluginSettingTab,
-	Setting,
-	TFile,
+        App,
+        Editor,
+        EditorPosition,
+        EditorSuggest,
+        EditorSuggestContext,
+        EditorSuggestTriggerInfo,
+        moment,
+        Plugin,
+        PluginSettingTab,
+        Setting,
+        TFile,
 } from "obsidian";
+
+declare const require: any;
 
 /* ------------------------------------------------------------------ */
 /* Settings                                                           */
@@ -370,29 +372,40 @@ class DDSuggest extends EditorSuggest<string> {
                         const target = linkPath + ".md";
                         const folder = this.plugin.getDailyFolder().trim();
                         (async () => {
-                                if (
-                                        folder &&
-                                        !this.app.vault.getAbstractFileByPath(folder)
-                                ) {
-                                        await this.app.vault.createFolder(folder);
-                                }
-                                let tpl = "";
-                                const daily = (this.app as any).internalPlugins?.plugins?.["daily-notes"]?.instance?.options;
-                                if (daily?.template) {
-                                        const f = this.app.vault.getAbstractFileByPath(daily.template);
-                                        if (f) tpl = await this.app.vault.read(f as TFile);
-                                        const templates = (this.app as any).internalPlugins?.plugins?.["templates"]?.instance;
-                                        if (templates) {
-                                                try {
-                                                        if (typeof templates.parseTemplate === "function") {
-                                                                tpl = await templates.parseTemplate(tpl);
-                                                        } else if (typeof templates.replaceTemplates === "function") {
-                                                                tpl = await templates.replaceTemplates(tpl);
-                                                        }
-                                                } catch {}
+                                const api = this.plugin.getDailyNotesAPI();
+                                const date = moment(targetDate, "YYYY-MM-DD");
+                                if (api && typeof api.createDailyNote === "function") {
+                                        try {
+                                                await api.createDailyNote(date, this.app);
+                                        } catch {
+                                                /* fallback */
                                         }
                                 }
-                                await this.app.vault.create(target, tpl);
+                                if (!this.app.vault.getAbstractFileByPath(target)) {
+                                        if (
+                                                folder &&
+                                                !this.app.vault.getAbstractFileByPath(folder)
+                                        ) {
+                                                await this.app.vault.createFolder(folder);
+                                        }
+                                        let tpl = "";
+                                        const daily = this.plugin.getDailySettings();
+                                        if (daily?.template) {
+                                                const f = this.app.vault.getAbstractFileByPath(daily.template);
+                                                if (f) tpl = await this.app.vault.read(f as TFile);
+                                                const templates = (this.app as any).internalPlugins?.plugins?.["templates"]?.instance;
+                                                if (templates) {
+                                                        try {
+                                                                if (typeof templates.parseTemplate === "function") {
+                                                                        tpl = await templates.parseTemplate(tpl);
+                                                                } else if (typeof templates.replaceTemplates === "function") {
+                                                                        tpl = await templates.replaceTemplates(tpl);
+                                                                }
+                                                        } catch {}
+                                                }
+                                        }
+                                        await this.app.vault.create(target, tpl);
+                                }
                                 if (settings.openOnCreate && this.app.workspace?.openLinkText) {
                                         this.app.workspace.openLinkText(target, "", false);
                                 }
@@ -417,8 +430,27 @@ class DDSuggest extends EditorSuggest<string> {
 export default class DynamicDates extends Plugin {
         settings: DDSettings = DEFAULT_SETTINGS;
 
+        getDailyNotesAPI(): any {
+                try {
+                        return require('obsidian-daily-notes-interface');
+                } catch {}
+                return null;
+        }
+
+        getDailySettings(): any {
+                const api = this.getDailyNotesAPI();
+                if (api && typeof api.getDailyNoteSettings === 'function') {
+                        try { return api.getDailyNoteSettings(this.app); } catch {}
+                }
+                const mc = (this.app as any).metadataCache;
+                if (mc && typeof mc.getDailyNoteSettings === "function") {
+                        try { return mc.getDailyNoteSettings(); } catch {}
+                }
+                return (this.app as any).internalPlugins?.plugins?.["daily-notes"]?.instance?.options || {};
+        }
+
         getDailyFolder(): string {
-                const daily = (this.app as any).internalPlugins?.plugins?.["daily-notes"]?.instance?.options;
+                const daily = this.getDailySettings();
                 return daily?.folder || "";
         }
 
@@ -456,7 +488,7 @@ export default class DynamicDates extends Plugin {
 
         async loadSettings() {
                 this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
-                const daily = (this.app as any).internalPlugins?.plugins?.["daily-notes"]?.instance?.options;
+                const daily = this.getDailySettings();
                 if (daily && !this.settings.dateFormat) this.settings.dateFormat = daily.format;
                 if (!this.settings.customDates) this.settings.customDates = {};
                 (phraseToMoment as any).customDates = Object.fromEntries(Object.entries(this.settings.customDates).map(([k,v]) => [k.toLowerCase(), v]));

@@ -117,7 +117,7 @@
   /* ------------------------------------------------------------------ */
   /* onTrigger guard rails                                             */
   /* ------------------------------------------------------------------ */
-  const plugin = { settings: { dateFormat: 'YYYY-MM-DD', autoCreate: false, acceptKey:'Tab', noAliasWithShift: true, aliasFormat:'capitalize', openOnCreate:false }, dailyFolder:'', allPhrases: () => PHRASES, getDailyFolder(){ return this.dailyFolder; }, customCanonical(){ return null; } };
+  const plugin = { settings: { dateFormat: 'YYYY-MM-DD', autoCreate: false, acceptKey:'Tab', noAliasWithShift: true, aliasFormat:'capitalize', openOnCreate:false }, dailyFolder:'', allPhrases: () => PHRASES, getDailyFolder(){ return this.dailyFolder; }, getDailySettings(){ return { folder:this.dailyFolder, template:'tpl.md', format:'YYYY-MM-DD' }; }, getDailyNotesAPI(){ return null; }, customCanonical(){ return null; } };
   const app = { vault: {} };
   const sugg = new DDSuggest(app, plugin);
 
@@ -176,8 +176,7 @@
     createFolder: (p) => { calls.push(['mkdir', p]); return { then: r => r() }; },
     create: (p, d) => { calls.push(['create', p, d]); return { then: r => r() }; },
   };
-  app.internalPlugins = { plugins: { 
-    'daily-notes': { instance: { options: { template: 'tpl.md' } } },
+  app.internalPlugins = { plugins: {
     'templates': { instance: { parseTemplate: (t) => { calls.push(['tpl', t]); return t.toUpperCase(); } } }
   } };
   app.workspace = { openLinkText:(p)=>calls.push(['open', p]) };
@@ -189,6 +188,7 @@
   await new Promise(r => setTimeout(r, 0));
   assert.deepStrictEqual(calls, [
     ['insert', '[[Daily/2024-05-09|Tomorrow]]'],
+    ['check', 'Daily/2024-05-09.md'],
     ['check', 'Daily/2024-05-09.md'],
     ['check', 'Daily'],
     ['mkdir', 'Daily'],
@@ -236,7 +236,7 @@
   /* ------------------------------------------------------------------ */
   /* onTrigger additional guard rails                                   */
   /* ------------------------------------------------------------------ */
-  const tPlugin = { settings: Object.assign({}, plugin.settings, { autoCreate: false }), dailyFolder:'Daily', allPhrases: () => PHRASES, getDailyFolder(){ return this.dailyFolder; }, customCanonical(){ return null; } };
+  const tPlugin = { settings: Object.assign({}, plugin.settings, { autoCreate: false }), dailyFolder:'Daily', allPhrases: () => PHRASES, getDailyFolder(){ return this.dailyFolder; }, getDailySettings(){ return { folder:this.dailyFolder, template:'tpl.md', format:'YYYY-MM-DD' }; }, getDailyNotesAPI(){ return null; }, customCanonical(){ return null; } };
   const tApp = { vault:{}, workspace:{} };
   const tSugg = new DDSuggest(tApp, tPlugin);
   assert.strictEqual(tSugg.onTrigger({line:0,ch:4}, { getLine:()=> 'next' }, null), null);
