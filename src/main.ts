@@ -17,7 +17,8 @@ import {
 /* ------------------------------------------------------------------ */
 
 interface DDSettings {
-        dateFormat: string;
+        /** @deprecated Date format is now taken from the daily notes plugin */
+        dateFormat?: string;
         acceptKey: "Enter" | "Tab";
         noAliasWithShift: boolean;
         aliasFormat: "capitalize" | "keep" | "date";
@@ -25,7 +26,6 @@ interface DDSettings {
 }
 
 const DEFAULT_SETTINGS: DDSettings = {
-        dateFormat: "YYYY-MM-DD",
         acceptKey: "Tab",
         noAliasWithShift: false,
         aliasFormat: "capitalize",
@@ -297,14 +297,14 @@ class DDSuggest extends EditorSuggest<string> {
 
                 const direct = phraseToMoment(qLower);
                 if (direct) {
-                        return [direct.format(this.plugin.settings.dateFormat)];
+                        return [direct.format(this.plugin.getDateFormat())];
                 }
 
                 const uniq = new Set<string>();
                 for (const p of this.plugin.allPhrases()) {
                         if (!p.startsWith(qLower)) continue;
                         const dt = phraseToMoment(p);
-                        if (dt) uniq.add(dt.format(this.plugin.settings.dateFormat));
+                        if (dt) uniq.add(dt.format(this.plugin.getDateFormat()));
                 }
                 return [...uniq];
         }
@@ -313,7 +313,7 @@ class DDSuggest extends EditorSuggest<string> {
         renderSuggestion(value: string, el: HTMLElement) {
                 const query = this.context?.query || "";
                 let phrase = query.toLowerCase();
-                const target = moment(value, this.plugin.settings.dateFormat).format("YYYY-MM-DD");
+                const target = moment(value, this.plugin.getDateFormat()).format("YYYY-MM-DD");
                 const candidates = this.plugin
                         .allPhrases()
                         .filter((p) =>
@@ -386,7 +386,7 @@ class DDSuggest extends EditorSuggest<string> {
 		/* ----------------------------------------------------------------
 		   1. Find the canonical phrase that maps to this calendar date
 		----------------------------------------------------------------- */
-                const targetDate = moment(value, settings.dateFormat).format("YYYY-MM-DD");
+                const targetDate = moment(value, this.plugin.getDateFormat()).format("YYYY-MM-DD");
 
                 const candidates = this.plugin.allPhrases().filter(p =>
                         p.startsWith(query.toLowerCase()) &&
@@ -513,6 +513,11 @@ export default class DynamicDates extends Plugin {
                 return daily?.folder || "";
         }
 
+        getDateFormat(): string {
+                const daily = this.getDailySettings();
+                return daily?.format || "YYYY-MM-DD";
+        }
+
         allPhrases(): string[] {
                 return [...PHRASES, ...Object.keys(this.settings.customDates || {}).map(p => p.toLowerCase())];
         }
@@ -543,8 +548,6 @@ export default class DynamicDates extends Plugin {
 
         async loadSettings() {
                 this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
-                const daily = this.getDailySettings();
-                if (daily && !this.settings.dateFormat) this.settings.dateFormat = daily.format;
                 if (!this.settings.customDates) this.settings.customDates = {};
                 this.refreshCustomMap();
         }
@@ -556,7 +559,7 @@ export default class DynamicDates extends Plugin {
         linkForPhrase(phrase: string): string | null {
                 const m = phraseToMoment(phrase);
                 if (!m) return null;
-                const value = m.format(this.settings.dateFormat);
+                const value = m.format(this.getDateFormat());
                 const targetDate = m.format("YYYY-MM-DD");
                 const custom = this.customCanonical(phrase);
                 let alias: string;
@@ -599,28 +602,6 @@ class DDSettingTab extends PluginSettingTab {
 	display(): void {
 		const { containerEl } = this;
 		containerEl.empty();
-
-                new Setting(containerEl)
-                        .setName("Date format")
-                        .setDesc("Format used when inserting dates")
-                        .addDropdown((d) =>
-                                d
-                                        .addOptions({
-                                                "YYYY-MM-DD": "YYYY-MM-DD",
-                                                "DD-MM-YYYY": "DD-MM-YYYY",
-                                                "MM-DD-YYYY": "MM-DD-YYYY",
-                                                "YYYY/MM/DD": "YYYY/MM/DD",
-                                        })
-                                        .setValue(this.plugin.settings.dateFormat)
-                                        .onChange(async (v: string) => {
-                                                this.plugin.settings.dateFormat = v;
-                                                await this.plugin.saveSettings();
-                                        }),
-                        );
-
-
-                new Setting(containerEl)
-
 
                 new Setting(containerEl)
                         .setName("Accept key")
