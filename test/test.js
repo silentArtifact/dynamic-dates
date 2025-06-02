@@ -270,6 +270,21 @@
   assert.strictEqual(fmt(phraseToMoment('quarter end')), '2024-09-30');
 
   /* ------------------------------------------------------------------ */
+  /* customCanonical cache behaviour                                    */
+  /* ------------------------------------------------------------------ */
+  const cachePlugin = new DynamicDates();
+  cachePlugin.loadData = async () => ({ customDates: { 'Leap Day': '02-29' } });
+  cachePlugin.saveData = async () => {};
+  await cachePlugin.loadSettings();
+  assert.strictEqual(cachePlugin.customMap['leap day'], 'Leap Day');
+  assert.strictEqual(cachePlugin.customCanonical('leap day'), 'Leap Day');
+  cachePlugin.settings.customDates['Quarter End'] = '09-30';
+  // customMap not refreshed yet so lookup should fail
+  assert.strictEqual(cachePlugin.customCanonical('quarter end'), null);
+  await cachePlugin.saveSettings();
+  assert.strictEqual(cachePlugin.customCanonical('quarter end'), 'Quarter End');
+
+  /* ------------------------------------------------------------------ */
   /* custom dates feature                                               */
   /* ------------------------------------------------------------------ */
   phraseToMoment.customDates = { 'fall start': '08-22' };
