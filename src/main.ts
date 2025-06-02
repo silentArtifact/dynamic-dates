@@ -335,12 +335,18 @@ class DDSuggest extends EditorSuggest<string> {
                                         alias = phraseWords
                                                 .map((w, i) => {
                                                         const t = typedWords[i];
-                                                        if (
-                                                                t &&
-                                                                t.length === w.length &&
-                                                                t.toLowerCase() === w.toLowerCase()
-                                                        ) {
-                                                                return isProperNoun(w) ? properCase(w) : t;
+                                                        if (t) {
+                                                                // exact match preserves user casing
+                                                                if (t.length === w.length && t.toLowerCase() === w.toLowerCase()) {
+                                                                        return isProperNoun(w) ? properCase(w) : t;
+                                                                }
+                                                                // typed prefix should keep typed characters
+                                                                if (w.toLowerCase().startsWith(t.toLowerCase())) {
+                                                                        if (isProperNoun(w)) {
+                                                                                return properCase(w);
+                                                                        }
+                                                                        return t + w.slice(t.length);
+                                                                }
                                                         }
                                                         if (isProperNoun(w)) return properCase(w);
                                                         if (["last", "next"].includes(w.toLowerCase()) && t)

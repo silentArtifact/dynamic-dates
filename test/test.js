@@ -135,7 +135,7 @@
   const editor = { getLine:()=>'', replaceRange:(t)=>inserted.push(t) };
   sugg.context = { editor, start:{line:0,ch:0}, end:{line:0,ch:3}, query:'tom' };
   sugg.selectSuggestion('2024-05-09', new KeyboardEvent({ shiftKey:false, key:'Tab' }));
-  assert.strictEqual(inserted.pop(), '[[2024-05-09|Tomorrow]]');
+  assert.strictEqual(inserted.pop(), '[[2024-05-09|tomorrow]]');
 
   sugg.context = { editor, start:{line:0,ch:0}, end:{line:0,ch:3}, query:'tom' };
   sugg.selectSuggestion('2024-05-09', new KeyboardEvent({ shiftKey:true, key:'Tab' }));
@@ -227,7 +227,7 @@
   ev1.preventDefault = () => { called1 = true; };
   tSugg.selectSuggestion('2024-05-09', ev1);
   assert.ok(called1);
-  assert.strictEqual(inserted2.pop(), '[[Daily/2024-05-09|Tomorrow]]');
+  assert.strictEqual(inserted2.pop(), '[[Daily/2024-05-09|tomorrow]]');
 
   const ev2 = new KeyboardEvent({ key:'Enter', shiftKey:true });
   let called2 = false;
