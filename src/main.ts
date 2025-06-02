@@ -582,7 +582,16 @@ class DDSettingTab extends PluginSettingTab {
                                         }),
                         );
 
-                containerEl.createDiv({ text: "Custom date mappings" });
+                (containerEl as any).createEl("h3", { text: "Custom date mappings" });
+                new Setting(containerEl)
+                        .setDesc("Map phrases to fixed dates, e.g. 'Mid Year' → '06-01'")
+                        .addExtraButton(b =>
+                                b.setIcon("plus")
+                                 .setTooltip("Add mapping")
+                                 .onClick(() => {
+                                         this.plugin.settings.customDates["New phrase"] = "01-01";
+                                         this.display();
+                                 }));
                 Object.entries(this.plugin.settings.customDates).forEach(([p, d]) => {
                         let phrase = p;
                         let date = d;
@@ -607,19 +616,15 @@ class DDSettingTab extends PluginSettingTab {
                                                  await this.plugin.saveSettings();
                                          }))
                                 .addExtraButton(b =>
-                                        b.onClick(async () => {
-                                                delete this.plugin.settings.customDates[phrase];
-                                                await this.plugin.saveSettings();
-                                                this.display();
-                                        }));
+                                        b.setIcon("trash")
+                                         .setTooltip("Remove")
+                                         .onClick(async () => {
+                                                 delete this.plugin.settings.customDates[phrase];
+                                                 await this.plugin.saveSettings();
+                                                 this.display();
+                                         }));
                 });
-                new Setting(containerEl)
-                        .addButton(b =>
-                                b.setButtonText("Add")
-                                 .onClick(() => {
-                                         this.plugin.settings.customDates["New phrase"] = "01-01";
-                                         this.display();
-                                 }));
+
 
                 // A legacy JSON input for custom dates existed here in early
                 // versions of the plugin. It has been removed to simplify the
