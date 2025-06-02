@@ -4,7 +4,6 @@ const obsidian_1 = require("obsidian");
 const DEFAULT_SETTINGS = {
     acceptKey: "Tab",
     noAliasWithShift: false,
-    aliasFormat: "capitalize",
     customDates: {},
 };
 /* ------------------------------------------------------------------ */
@@ -276,55 +275,45 @@ class DDSuggest extends obsidian_1.EditorSuggest {
         if (candidates.length) {
             phrase = candidates.sort((a, b) => a.length - b.length)[0];
         }
-        const settings = this.plugin.settings;
         const custom = this.plugin.customCanonical(phrase);
         let alias;
-        if (settings.aliasFormat === "keep") {
-            alias = custom || query;
-        }
-        else if (settings.aliasFormat === "date") {
-            const fmt = needsYearAlias(query) ? "MMMM Do, YYYY" : "MMMM Do";
-            alias = (0, obsidian_1.moment)(target, "YYYY-MM-DD").format(fmt);
-        }
-        else {
-            if (candidates.length) {
-                phrase = candidates.sort((a, b) => a.length - b.length)[0];
-                const canonical = this.plugin.customCanonical(phrase);
-                if (canonical) {
-                    alias = canonical;
-                }
-                else {
-                    const typedWords = query.split(/\s+/);
-                    const phraseWords = phrase.split(/\s+/);
-                    alias = phraseWords
-                        .map((w, i) => {
-                        const t = typedWords[i];
-                        if (t) {
-                            // exact match preserves user casing
-                            if (t.length === w.length && t.toLowerCase() === w.toLowerCase()) {
-                                return isProperNoun(w) ? properCase(w) : t;
-                            }
-                            // typed prefix should keep typed characters
-                            if (w.toLowerCase().startsWith(t.toLowerCase())) {
-                                if (isProperNoun(w)) {
-                                    return properCase(w);
-                                }
-                                return t + w.slice(t.length);
-                            }
-                        }
-                        if (isProperNoun(w))
-                            return properCase(w);
-                        if (["last", "next"].includes(w.toLowerCase()) && t)
-                            return t;
-                        return w.replace(/\b\w/g, ch => ch.toUpperCase());
-                    })
-                        .join(" ");
-                }
+        if (candidates.length) {
+            phrase = candidates.sort((a, b) => a.length - b.length)[0];
+            const canonical = this.plugin.customCanonical(phrase);
+            if (canonical) {
+                alias = canonical;
             }
             else {
-                const fmt = needsYearAlias(query) ? "MMMM Do, YYYY" : "MMMM Do";
-                alias = (0, obsidian_1.moment)(target, "YYYY-MM-DD").format(fmt);
+                const typedWords = query.split(/\s+/);
+                const phraseWords = phrase.split(/\s+/);
+                alias = phraseWords
+                    .map((w, i) => {
+                    const t = typedWords[i];
+                    if (t) {
+                        // exact match preserves user casing
+                        if (t.length === w.length && t.toLowerCase() === w.toLowerCase()) {
+                            return isProperNoun(w) ? properCase(w) : t;
+                        }
+                        // typed prefix should keep typed characters
+                        if (w.toLowerCase().startsWith(t.toLowerCase())) {
+                            if (isProperNoun(w)) {
+                                return properCase(w);
+                            }
+                            return t + w.slice(t.length);
+                        }
+                    }
+                    if (isProperNoun(w))
+                        return properCase(w);
+                    if (["last", "next"].includes(w.toLowerCase()) && t)
+                        return t;
+                    return w.replace(/\b\w/g, ch => ch.toUpperCase());
+                })
+                    .join(" ");
             }
+        }
+        else {
+            const fmt = needsYearAlias(query) ? "MMMM Do, YYYY" : "MMMM Do";
+            alias = (0, obsidian_1.moment)(target, "YYYY-MM-DD").format(fmt);
         }
         const niceDate = (0, obsidian_1.moment)(target, "YYYY-MM-DD").format("MMMM Do, YYYY");
         el.createDiv({ text: `${niceDate} (${alias})` });
@@ -345,52 +334,46 @@ class DDSuggest extends obsidian_1.EditorSuggest {
         let phrase = query.toLowerCase();
         let alias;
         const custom = this.plugin.customCanonical(phrase);
-        if (settings.aliasFormat === "keep") {
-            alias = custom || query;
+        if (custom) {
+            alias = custom;
         }
-        else if (settings.aliasFormat === "date") {
-            const fmt = needsYearAlias(query) ? "MMMM Do, YYYY" : "MMMM Do";
-            alias = (0, obsidian_1.moment)(targetDate, "YYYY-MM-DD").format(fmt);
-        }
-        else {
-            if (candidates.length) {
-                phrase = candidates.sort((a, b) => a.length - b.length)[0];
-                const canonical = this.plugin.customCanonical(phrase);
-                if (canonical) {
-                    alias = canonical;
-                }
-                else {
-                    const typedWords = query.split(/\s+/);
-                    const phraseWords = phrase.split(/\s+/);
-                    alias = phraseWords
-                        .map((w, i) => {
-                        const t = typedWords[i];
-                        if (t) {
-                            // exact match preserves user casing
-                            if (t.length === w.length && t.toLowerCase() === w.toLowerCase()) {
-                                return isProperNoun(w) ? properCase(w) : t;
-                            }
-                            // typed prefix should keep typed characters
-                            if (w.toLowerCase().startsWith(t.toLowerCase())) {
-                                if (isProperNoun(w)) {
-                                    return properCase(w);
-                                }
-                                return t + w.slice(t.length);
-                            }
-                        }
-                        if (isProperNoun(w))
-                            return properCase(w);
-                        if (["last", "next"].includes(w.toLowerCase()) && t)
-                            return t;
-                        return w.replace(/\b\w/g, ch => ch.toUpperCase());
-                    })
-                        .join(" ");
-                }
+        else if (candidates.length) {
+            phrase = candidates.sort((a, b) => a.length - b.length)[0];
+            const canonical = this.plugin.customCanonical(phrase);
+            if (canonical) {
+                alias = canonical;
             }
             else {
-                const fmt = needsYearAlias(query) ? "MMMM Do, YYYY" : "MMMM Do";
-                alias = (0, obsidian_1.moment)(targetDate, "YYYY-MM-DD").format(fmt);
+                const typedWords = query.split(/\s+/);
+                const phraseWords = phrase.split(/\s+/);
+                alias = phraseWords
+                    .map((w, i) => {
+                    const t = typedWords[i];
+                    if (t) {
+                        // exact match preserves user casing
+                        if (t.length === w.length && t.toLowerCase() === w.toLowerCase()) {
+                            return isProperNoun(w) ? properCase(w) : t;
+                        }
+                        // typed prefix should keep typed characters
+                        if (w.toLowerCase().startsWith(t.toLowerCase())) {
+                            if (isProperNoun(w)) {
+                                return properCase(w);
+                            }
+                            return t + w.slice(t.length);
+                        }
+                    }
+                    if (isProperNoun(w))
+                        return properCase(w);
+                    if (["last", "next"].includes(w.toLowerCase()) && t)
+                        return t;
+                    return w.replace(/\b\w/g, ch => ch.toUpperCase());
+                })
+                    .join(" ");
             }
+        }
+        else {
+            const fmt = needsYearAlias(query) ? "MMMM Do, YYYY" : "MMMM Do";
+            alias = (0, obsidian_1.moment)(targetDate, "YYYY-MM-DD").format(fmt);
         }
         /* ----------------------------------------------------------------
            2. Build the wikilink with alias
@@ -513,13 +496,6 @@ class DynamicDates extends obsidian_1.Plugin {
         if (custom) {
             alias = custom;
         }
-        else if (this.settings.aliasFormat === "keep") {
-            alias = phrase;
-        }
-        else if (this.settings.aliasFormat === "date") {
-            const fmt = needsYearAlias(phrase) ? "MMMM Do, YYYY" : "MMMM Do";
-            alias = m.format(fmt);
-        }
         else {
             alias = phrase
                 .split(/\s+/)
@@ -567,20 +543,6 @@ class DDSettingTab extends obsidian_1.PluginSettingTab {
             .setValue(this.plugin.settings.noAliasWithShift)
             .onChange(async (v) => {
             this.plugin.settings.noAliasWithShift = v;
-            await this.plugin.saveSettings();
-        }));
-        new obsidian_1.Setting(containerEl)
-            .setName("Alias style")
-            .setDesc("How the alias part of links is formatted")
-            .addDropdown((d) => d
-            .addOptions({
-            capitalize: "Capitalize phrase",
-            keep: "Keep typed text",
-            date: "Format as date",
-        })
-            .setValue(this.plugin.settings.aliasFormat)
-            .onChange(async (v) => {
-            this.plugin.settings.aliasFormat = v;
             await this.plugin.saveSettings();
         }));
         containerEl.createEl("h3", { text: "Custom date mappings" });

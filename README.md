@@ -6,7 +6,6 @@ Dynamic Dates is an Obsidian plugin that turns natural language phrases such as 
 
 - Suggest dates while typing phrases like **today**, **tomorrow** or **next Monday**.
 - Insert a wiki link to your daily note using <kbd>Tab</kbd> or <kbd>Enter</kbd>.
-- Customise how the link alias looks: keep the typed text, capitalise the phrase or display the formatted date.
 - Define your own phrases (e.g. `Mid Year`) that map to a specific calendar date.
 - Convert an entire note's text to date links via the `Convert natural-language dates` command.
 
