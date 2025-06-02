@@ -83,6 +83,11 @@ function properCase(word: string): string {
         return word.charAt(0).toUpperCase() + word.slice(1).toLowerCase();
 }
 
+function needsYearAlias(phrase: string): boolean {
+        const lower = phrase.toLowerCase().trim();
+        return /^(?:last|next)\s+(jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:tember)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)\s+\d{1,2}(?:st|nd|rd|th)?$/.test(lower);
+}
+
 const PHRASES = BASE_WORDS.flatMap((w) =>
         WEEKDAYS.includes(w) ? [w, `last ${w}`, `next ${w}`] : [w],
 );
@@ -324,7 +329,8 @@ class DDSuggest extends EditorSuggest<string> {
                 if (settings.aliasFormat === "keep") {
                         alias = custom || query;
                 } else if (settings.aliasFormat === "date") {
-                        alias = moment(targetDate, "YYYY-MM-DD").format("MMMM Do");
+                        const fmt = needsYearAlias(query) ? "MMMM Do, YYYY" : "MMMM Do";
+                        alias = moment(targetDate, "YYYY-MM-DD").format(fmt);
                 } else {
                         if (candidates.length) {
                                 phrase = candidates.sort((a, b) => a.length - b.length)[0];
@@ -358,7 +364,8 @@ class DDSuggest extends EditorSuggest<string> {
                                                 .join(" ");
                                 }
                         } else {
-                                alias = moment(targetDate, "YYYY-MM-DD").format("MMMM Do");
+                                const fmt = needsYearAlias(query) ? "MMMM Do, YYYY" : "MMMM Do";
+                                alias = moment(targetDate, "YYYY-MM-DD").format(fmt);
                         }
                 }
 	
@@ -480,7 +487,8 @@ export default class DynamicDates extends Plugin {
                 } else if (this.settings.aliasFormat === "keep") {
                         alias = phrase;
                 } else if (this.settings.aliasFormat === "date") {
-                        alias = m.format("MMMM Do");
+                        const fmt = needsYearAlias(phrase) ? "MMMM Do, YYYY" : "MMMM Do";
+                        alias = m.format(fmt);
                 } else {
                         alias = phrase
                                 .split(/\s+/)
