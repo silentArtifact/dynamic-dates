@@ -196,6 +196,7 @@ phraseToMoment.customDates = {};
  */
 class DDSuggest extends obsidian_1.EditorSuggest {
     plugin;
+    _last = [];
     constructor(app, plugin) {
         super(app);
         this.plugin = plugin;
@@ -249,7 +250,8 @@ class DDSuggest extends obsidian_1.EditorSuggest {
         const qLower = q.toLowerCase();
         const direct = phraseToMoment(qLower);
         if (direct) {
-            return [direct.format(this.plugin.getDateFormat())];
+            this._last = [direct.format(this.plugin.getDateFormat())];
+            return this._last;
         }
         const uniq = new Set();
         for (const p of this.plugin.allPhrases()) {
@@ -259,7 +261,8 @@ class DDSuggest extends obsidian_1.EditorSuggest {
             if (dt)
                 uniq.add(dt.format(this.plugin.getDateFormat()));
         }
-        return [...uniq];
+        this._last = [...uniq];
+        return this._last;
     }
     /** Render a single entry in the suggestion dropdown. */
     renderSuggestion(value, el) {
@@ -413,6 +416,18 @@ class DDSuggest extends obsidian_1.EditorSuggest {
         editor.replaceRange(final, start, end);
         this.close();
     }
+    onKeyDown(ev) {
+        if (ev.key === 'Tab' && this.plugin.settings.acceptKey === 'Tab' && this.context) {
+            if (typeof ev.preventDefault === 'function')
+                ev.preventDefault();
+            const list = this._last;
+            const value = list[0];
+            if (value)
+                this.selectSuggestion(value, ev);
+            return true;
+        }
+        return false;
+    }
 }
 /* ------------------------------------------------------------------ */
 /* Main plugin & settings                                             */
@@ -459,7 +474,11 @@ class DynamicDates extends obsidian_1.Plugin {
     }
     async onload() {
         await this.loadSettings();
-        this.registerEditorSuggest(new DDSuggest(this.app, this));
+        const sugg = new DDSuggest(this.app, this);
+        this.registerEditorSuggest(sugg);
+        this.registerDomEvent(document, 'keydown', (ev) => {
+            sugg.onKeyDown(ev);
+        });
         this.addSettingTab(new DDSettingTab(this.app, this));
         this.addCommand({
             id: "convert-dates",
