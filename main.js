@@ -318,6 +318,18 @@ class DDSuggest extends obsidian_1.EditorSuggest {
                     const f = this.app.vault.getAbstractFileByPath(daily.template);
                     if (f)
                         tpl = await this.app.vault.read(f);
+                    const templates = this.app.internalPlugins?.plugins?.["templates"]?.instance;
+                    if (templates) {
+                        try {
+                            if (typeof templates.parseTemplate === "function") {
+                                tpl = await templates.parseTemplate(tpl);
+                            }
+                            else if (typeof templates.replaceTemplates === "function") {
+                                tpl = await templates.replaceTemplates(tpl);
+                            }
+                        }
+                        catch { }
+                    }
                 }
                 await this.app.vault.create(target, tpl);
                 if (settings.openOnCreate && this.app.workspace?.openLinkText) {
