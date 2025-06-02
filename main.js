@@ -264,7 +264,8 @@ class DDSuggest extends obsidian_1.EditorSuggest {
     }
     /** Render a single entry in the suggestion dropdown. */
     renderSuggestion(value, el) {
-        let phrase = this.context?.query.toLowerCase() || "";
+        const query = this.context?.query || "";
+        let phrase = query.toLowerCase();
         const target = (0, obsidian_1.moment)(value, this.plugin.settings.dateFormat).format("YYYY-MM-DD");
         const candidates = this.plugin
             .allPhrases()
@@ -273,7 +274,58 @@ class DDSuggest extends obsidian_1.EditorSuggest {
         if (candidates.length) {
             phrase = candidates.sort((a, b) => a.length - b.length)[0];
         }
-        el.createDiv({ text: `${value} (${phrase})` });
+        const settings = this.plugin.settings;
+        const custom = this.plugin.customCanonical(phrase);
+        let alias;
+        if (settings.aliasFormat === "keep") {
+            alias = custom || query;
+        }
+        else if (settings.aliasFormat === "date") {
+            const fmt = needsYearAlias(query) ? "MMMM Do, YYYY" : "MMMM Do";
+            alias = (0, obsidian_1.moment)(target, "YYYY-MM-DD").format(fmt);
+        }
+        else {
+            if (candidates.length) {
+                phrase = candidates.sort((a, b) => a.length - b.length)[0];
+                const canonical = this.plugin.customCanonical(phrase);
+                if (canonical) {
+                    alias = canonical;
+                }
+                else {
+                    const typedWords = query.split(/\s+/);
+                    const phraseWords = phrase.split(/\s+/);
+                    alias = phraseWords
+                        .map((w, i) => {
+                        const t = typedWords[i];
+                        if (t) {
+                            // exact match preserves user casing
+                            if (t.length === w.length && t.toLowerCase() === w.toLowerCase()) {
+                                return isProperNoun(w) ? properCase(w) : t;
+                            }
+                            // typed prefix should keep typed characters
+                            if (w.toLowerCase().startsWith(t.toLowerCase())) {
+                                if (isProperNoun(w)) {
+                                    return properCase(w);
+                                }
+                                return t + w.slice(t.length);
+                            }
+                        }
+                        if (isProperNoun(w))
+                            return properCase(w);
+                        if (["last", "next"].includes(w.toLowerCase()) && t)
+                            return t;
+                        return w.replace(/\b\w/g, ch => ch.toUpperCase());
+                    })
+                        .join(" ");
+                }
+            }
+            else {
+                const fmt = needsYearAlias(query) ? "MMMM Do, YYYY" : "MMMM Do";
+                alias = (0, obsidian_1.moment)(target, "YYYY-MM-DD").format(fmt);
+            }
+        }
+        const niceDate = (0, obsidian_1.moment)(target, "YYYY-MM-DD").format("MMMM Do, YYYY");
+        el.createDiv({ text: `${niceDate} (${alias})` });
     }
     /**
      * Replace the typed phrase with the selected wikilink and optionally
