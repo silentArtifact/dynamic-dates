@@ -173,11 +173,25 @@ function phraseToMoment(phrase: string): moment.Moment | null {
                 }
         }
 
-        if (lower in HOLIDAYS) {
-                const calc = HOLIDAYS[lower];
-                let m = calc(now.year());
-                if (m.isBefore(now, "day")) m = calc(now.year() + 1);
-                return m;
+        for (const [name, calc] of Object.entries(HOLIDAYS)) {
+                if (lower === name) {
+                        let m = calc(now.year());
+                        if (m.isBefore(now, "day")) m = calc(now.year() + 1);
+                        return m;
+                }
+                if (lower === `last ${name}`) {
+                        return calc(now.year() - 1);
+                }
+                if (lower === `next ${name}`) {
+                        return calc(now.year() + 1);
+                }
+                const re = new RegExp(`^${name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}(?:\\s+of)?\\s+(\\d{2,4})$`);
+                const matchYear = lower.match(re);
+                if (matchYear) {
+                        let y = parseInt(matchYear[1]);
+                        if (y < 100) y += 2000;
+                        return calc(y);
+                }
         }
 
         if (lower === "today") return now;
