@@ -370,6 +370,15 @@ class DDSuggest extends EditorSuggest<string> {
                         const target = linkPath + ".md";
                         const folder = this.plugin.getDailyFolder().trim();
                         (async () => {
+                                const dailyPlugin = (this.app as any).internalPlugins?.plugins?.["daily-notes"]?.instance;
+                                if (dailyPlugin?.createDailyNote) {
+                                        const dt = moment(targetDate, "YYYY-MM-DD");
+                                        await dailyPlugin.createDailyNote(dt);
+                                        if (settings.openOnCreate && this.app.workspace?.openLinkText) {
+                                                this.app.workspace.openLinkText(target, "", false);
+                                        }
+                                        return;
+                                }
                                 if (
                                         folder &&
                                         !this.app.vault.getAbstractFileByPath(folder)

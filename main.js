@@ -308,6 +308,15 @@ class DDSuggest extends obsidian_1.EditorSuggest {
             const target = linkPath + ".md";
             const folder = this.plugin.getDailyFolder().trim();
             (async () => {
+                const dailyPlugin = this.app.internalPlugins?.plugins?.["daily-notes"]?.instance;
+                if (dailyPlugin?.createDailyNote) {
+                    const dt = (0, obsidian_1.moment)(targetDate, "YYYY-MM-DD");
+                    await dailyPlugin.createDailyNote(dt);
+                    if (settings.openOnCreate && this.app.workspace?.openLinkText) {
+                        this.app.workspace.openLinkText(target, "", false);
+                    }
+                    return;
+                }
                 if (folder &&
                     !this.app.vault.getAbstractFileByPath(folder)) {
                     await this.app.vault.createFolder(folder);
