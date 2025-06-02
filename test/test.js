@@ -126,6 +126,11 @@
   assert.strictEqual(fmt(phraseToMoment('may 1st, 2023')), '2023-05-01');
   assert.strictEqual(fmt(phraseToMoment('may 1, 23')), '2023-05-01');
   assert.strictEqual(fmt(phraseToMoment('may 1st, 23')), '2023-05-01');
+  assert.strictEqual(fmt(phraseToMoment('memorial day')), '2024-05-27');
+  assert.strictEqual(fmt(phraseToMoment('labor day')), '2024-09-02');
+  assert.strictEqual(fmt(phraseToMoment('thanksgiving')), '2024-11-28');
+  assert.strictEqual(fmt(phraseToMoment('mlk day')), '2025-01-20');
+  assert.strictEqual(fmt(phraseToMoment("new year's day")), '2025-01-01');
 
   /* ------------------------------------------------------------------ */
   /* onTrigger guard rails                                             */
