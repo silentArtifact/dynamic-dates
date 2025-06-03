@@ -762,8 +762,10 @@ class DDSettingTab extends PluginSettingTab {
 		this.plugin = plugin;
 	}
 	display(): void {
-		const { containerEl } = this;
-		containerEl.empty();
+                const { containerEl } = this;
+                containerEl.empty();
+
+                (containerEl as any).createEl("h3", { text: "Suggestion keys" });
 
                 new Setting(containerEl)
                         .setName("Accept key")
@@ -791,7 +793,7 @@ class DDSettingTab extends PluginSettingTab {
 
                 (containerEl as any).createEl("h3", { text: "Holiday groups" });
                 Object.entries(GROUP_HOLIDAYS).forEach(([g, list]) => {
-                        new Setting(containerEl)
+                        const groupSetting = new Setting(containerEl)
                                 .setName(g)
                                 .addToggle(t =>
                                         t.setValue(this.plugin.settings.holidayGroups[g] ?? false)
@@ -800,13 +802,14 @@ class DDSettingTab extends PluginSettingTab {
                                                  await this.plugin.saveSettings();
                                                  this.display();
                                          }));
+                        (groupSetting as any).settingEl.classList.add("dd-holiday-group");
                         if (this.plugin.settings.holidayGroups[g] ?? false) {
                                 list.forEach(h => {
                                         const now = moment();
                                         let m = HOLIDAYS[h].calc(now.year());
                                         if (m.isBefore(now, "day")) m = HOLIDAYS[h].calc(now.year() + 1);
                                         const label = h.split(/\s+/).map(w => properCase(w)).join(" ") + ` (${m.format("MMMM Do")})`;
-                                        new Setting(containerEl)
+                                        const subSetting = new Setting(containerEl)
                                                 .setName(label)
                                                 .addToggle(t =>
                                                         t.setValue(this.plugin.settings.holidayOverrides[h] ?? true)
@@ -814,6 +817,7 @@ class DDSettingTab extends PluginSettingTab {
                                                                  this.plugin.settings.holidayOverrides[h] = v;
                                                                  await this.plugin.saveSettings();
                                                          }));
+                                        (subSetting as any).settingEl.classList.add("dd-holiday-sub");
                                 });
                         }
                 });

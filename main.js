@@ -674,6 +674,7 @@ class DDSettingTab extends obsidian_1.PluginSettingTab {
     display() {
         const { containerEl } = this;
         containerEl.empty();
+        containerEl.createEl("h3", { text: "Suggestion keys" });
         new obsidian_1.Setting(containerEl)
             .setName("Accept key")
             .setDesc("Key used to accept a suggestion")
@@ -694,7 +695,7 @@ class DDSettingTab extends obsidian_1.PluginSettingTab {
         }));
         containerEl.createEl("h3", { text: "Holiday groups" });
         Object.entries(GROUP_HOLIDAYS).forEach(([g, list]) => {
-            new obsidian_1.Setting(containerEl)
+            const groupSetting = new obsidian_1.Setting(containerEl)
                 .setName(g)
                 .addToggle(t => t.setValue(this.plugin.settings.holidayGroups[g] ?? false)
                 .onChange(async (v) => {
@@ -702,6 +703,7 @@ class DDSettingTab extends obsidian_1.PluginSettingTab {
                 await this.plugin.saveSettings();
                 this.display();
             }));
+            groupSetting.settingEl.classList.add("dd-holiday-group");
             if (this.plugin.settings.holidayGroups[g] ?? false) {
                 list.forEach(h => {
                     const now = (0, obsidian_1.moment)();
@@ -709,13 +711,14 @@ class DDSettingTab extends obsidian_1.PluginSettingTab {
                     if (m.isBefore(now, "day"))
                         m = HOLIDAYS[h].calc(now.year() + 1);
                     const label = h.split(/\s+/).map(w => properCase(w)).join(" ") + ` (${m.format("MMMM Do")})`;
-                    new obsidian_1.Setting(containerEl)
+                    const subSetting = new obsidian_1.Setting(containerEl)
                         .setName(label)
                         .addToggle(t => t.setValue(this.plugin.settings.holidayOverrides[h] ?? true)
                         .onChange(async (v) => {
                         this.plugin.settings.holidayOverrides[h] = v;
                         await this.plugin.saveSettings();
                     }));
+                    subSetting.settingEl.classList.add("dd-holiday-sub");
                 });
             }
         });
