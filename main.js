@@ -702,23 +702,13 @@ class DynamicDates extends obsidian_1.Plugin {
         return daily?.format || "YYYY-MM-DD";
     }
     allPhrases() {
-        const holidays = HOLIDAY_PHRASES.filter(p => this.isHolidayEnabled(p));
+        const holidays = HOLIDAY_PHRASES.filter(p => holidayEnabled(p));
         const holidayVariants = holidays.flatMap(h => [h, `last ${h}`, `next ${h}`]);
         return [
             ...BASE_WORDS.flatMap(w => WEEKDAYS.includes(w) ? [w, `last ${w}`, `next ${w}`] : [w]),
             ...holidayVariants,
             ...Object.keys(this.settings.customDates || {}).map(p => p.toLowerCase()),
         ];
-    }
-    isHolidayEnabled(name) {
-        const entry = HOLIDAYS[name];
-        if (!entry)
-            return false;
-        const override = this.settings.holidayOverrides?.[entry.canonical];
-        if (typeof override === 'boolean')
-            return override;
-        const grp = this.settings.holidayGroups?.[entry.group];
-        return grp !== false;
     }
     /** Return the canonical form for a custom phrase, if any. */
     customCanonical(lower) {
