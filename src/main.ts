@@ -878,7 +878,7 @@ export default class DynamicDates extends Plugin {
                 // Try to delegate to the Daily Notes plugin if possible so that
                 // the user's configured template (and any integrations like the
                 // Templates core plugin) are correctly applied.
-                let createDailyNote: ((d: moment.Moment, app: any) => Promise<void>) | undefined;
+                let createDailyNote: any;
                 const hasReq = typeof (globalThis as any).require === 'function';
                 if (hasReq) {
                         try {
@@ -893,8 +893,13 @@ export default class DynamicDates extends Plugin {
                 if (createDailyNote) {
                         const m = moment(date, "YYYY-MM-DD");
                         try {
-                                await createDailyNote(m, this.app);
+                                await createDailyNote(m);
                         } catch {}
+                        if (!this.app.vault.getAbstractFileByPath(path)) {
+                                try {
+                                        await createDailyNote(m, this.app);
+                                } catch {}
+                        }
                         if (!this.app.vault.getAbstractFileByPath(path)) {
                                 try {
                                         await createDailyNote(this.app, m);
