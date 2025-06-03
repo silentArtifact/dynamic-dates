@@ -80,6 +80,12 @@ function lastWeekdayOfMonth(year: number, month: number, weekday: number) {
         return last.subtract(diff, "day");
 }
 
+function weekdayOnOrBefore(year: number, month: number, day: number, weekday: number) {
+        const target = moment(new Date(year, month, day));
+        const diff = (target.weekday() - weekday + 7) % 7;
+        return target.subtract(diff, "day");
+}
+
 interface HolidayDef {
         group: string;
         calc: (y: number) => moment.Moment;
@@ -138,6 +144,18 @@ const HOLIDAY_DEFS: Record<string, HolidayDef> = {
         "easter": { group: "Christian Holidays", calc: (y) => easter(y), aliases: ["easter sunday"] },
         "good friday": { group: "Christian Holidays", calc: (y) => easter(y).subtract(2, "day") },
         "ash wednesday": { group: "Christian Holidays", calc: (y) => easter(y).subtract(46, "day") },
+
+        // Canadian Federal Holidays
+        "canada day": { group: "Canadian Federal Holidays", calc: (y) => moment(new Date(y, 6, 1)) },
+        "victoria day": { group: "Canadian Federal Holidays", calc: (y) => weekdayOnOrBefore(y, 4, 24, 1) },
+        "canadian thanksgiving": {
+                group: "Canadian Federal Holidays",
+                calc: (y) => nthWeekdayOfMonth(y, 9, 1, 2),
+                aliases: ["thanksgiving (canada)", "thanksgiving canada"],
+        },
+
+        // UK Bank Holidays
+        "boxing day": { group: "UK Bank Holidays", calc: (y) => moment(new Date(y, 11, 26)) },
 };
 
 interface HolidayEntry extends HolidayDef { canonical: string; }
