@@ -802,9 +802,15 @@ class DynamicDates extends obsidian_1.Plugin {
         if (createDailyNote) {
             const m = (0, obsidian_1.moment)(date, "YYYY-MM-DD");
             try {
-                await createDailyNote(m, this.app);
+                await createDailyNote(m);
             }
             catch { }
+            if (!this.app.vault.getAbstractFileByPath(path)) {
+                try {
+                    await createDailyNote(m, this.app);
+                }
+                catch { }
+            }
             if (!this.app.vault.getAbstractFileByPath(path)) {
                 try {
                     await createDailyNote(this.app, m);
