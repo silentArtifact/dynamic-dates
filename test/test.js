@@ -131,10 +131,13 @@
   assert.strictEqual(fmt(phraseToMoment('labor day')), '2024-09-02');
   assert.strictEqual(fmt(phraseToMoment('thanksgiving')), '2024-11-28');
   assert.strictEqual(fmt(phraseToMoment('mlk day')), '2025-01-20');
+  assert.strictEqual(fmt(phraseToMoment('martin luther king day')), '2025-01-20');
   assert.strictEqual(fmt(phraseToMoment("new year's day")), '2025-01-01');
   assert.strictEqual(fmt(phraseToMoment('last christmas')), '2023-12-25');
   assert.strictEqual(fmt(phraseToMoment('christmas 24')), '2024-12-25');
   assert.strictEqual(fmt(phraseToMoment('christmas of 2025')), '2025-12-25');
+  assert.strictEqual(fmt(phraseToMoment("valentine's day")), '2025-02-14');
+  assert.strictEqual(fmt(phraseToMoment('easter')), '2025-04-20');
 
   // holiday toggles
   phraseToMoment.holidayGroups = { 'US Federal Holidays': false };
@@ -150,6 +153,16 @@
   assert.strictEqual(fmt(phraseToMoment('memorial day')), '2024-05-27');
   phraseToMoment.holidayGroups = { 'US Federal Holidays': true };
   phraseToMoment.holidayOverrides = {};
+
+  phraseToMoment.holidayGroups = { 'US Cultural Holidays': false };
+  assert.strictEqual(phraseToMoment("valentine's day"), null);
+  phraseToMoment.holidayGroups = { 'US Cultural Holidays': true };
+  assert.strictEqual(fmt(phraseToMoment("valentine's day")), '2025-02-14');
+
+  phraseToMoment.holidayGroups = { 'Christian Holidays': false };
+  assert.strictEqual(phraseToMoment('easter'), null);
+  phraseToMoment.holidayGroups = { 'Christian Holidays': true };
+  assert.strictEqual(fmt(phraseToMoment('easter')), '2025-04-20');
 
   /* ------------------------------------------------------------------ */
   /* onTrigger guard rails                                             */
@@ -330,11 +343,11 @@
   const hPlugin = new DynamicDates();
   hPlugin.settings = Object.assign({}, plugin.settings, {
     holidayGroups: { 'US Federal Holidays': true },
-    holidayOverrides: { 'mlk day': false }
+    holidayOverrides: { 'martin luther king jr day': false }
   });
   hPlugin.refreshHolidayMap();
   assert.ok(!hPlugin.allPhrases().includes('mlk day'));
-  hPlugin.settings.holidayOverrides['mlk day'] = true;
+  hPlugin.settings.holidayOverrides['martin luther king jr day'] = true;
   hPlugin.refreshHolidayMap();
   assert.ok(hPlugin.allPhrases().includes('mlk day'));
 

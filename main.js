@@ -49,10 +49,30 @@ function lastWeekdayOfMonth(year, month, weekday) {
     const diff = (last.weekday() - weekday + 7) % 7;
     return last.subtract(diff, "day");
 }
-const HOLIDAYS = {
+function easter(y) {
+    const a = y % 19;
+    const b = Math.floor(y / 100);
+    const c = y % 100;
+    const d = Math.floor(b / 4);
+    const e = b % 4;
+    const f = Math.floor((b + 8) / 25);
+    const g = Math.floor((b - f + 1) / 3);
+    const h = (19 * a + b - d - g + 15) % 30;
+    const i = Math.floor(c / 4);
+    const k = c % 4;
+    const l = (32 + 2 * e + 2 * i - h - k) % 7;
+    const m = Math.floor((a + 11 * h + 22 * l) / 451);
+    const month = Math.floor((h + l - 7 * m + 114) / 31) - 1;
+    const day = ((h + l - 7 * m + 114) % 31) + 1;
+    return (0, obsidian_1.moment)(new Date(y, month, day));
+}
+const HOLIDAY_DEFS = {
     "new year's day": { group: "US Federal Holidays", calc: (y) => (0, obsidian_1.moment)(new Date(y, 0, 1)) },
-    "mlk day": { group: "US Federal Holidays", calc: (y) => nthWeekdayOfMonth(y, 0, 1, 3) },
-    "martin luther king jr day": { group: "US Federal Holidays", calc: (y) => nthWeekdayOfMonth(y, 0, 1, 3) },
+    "martin luther king jr day": {
+        group: "US Federal Holidays",
+        calc: (y) => nthWeekdayOfMonth(y, 0, 1, 3),
+        aliases: ["mlk day", "martin luther king day"],
+    },
     "presidents day": { group: "US Federal Holidays", calc: (y) => nthWeekdayOfMonth(y, 1, 1, 3) },
     "memorial day": { group: "US Federal Holidays", calc: (y) => lastWeekdayOfMonth(y, 4, 1) },
     "juneteenth": { group: "US Federal Holidays", calc: (y) => (0, obsidian_1.moment)(new Date(y, 5, 19)) },
@@ -60,25 +80,48 @@ const HOLIDAYS = {
     "labor day": { group: "US Federal Holidays", calc: (y) => nthWeekdayOfMonth(y, 8, 1, 1) },
     "columbus day": { group: "US Federal Holidays", calc: (y) => nthWeekdayOfMonth(y, 9, 1, 2) },
     "veterans day": { group: "US Federal Holidays", calc: (y) => (0, obsidian_1.moment)(new Date(y, 10, 11)) },
-    "thanksgiving": { group: "US Federal Holidays", calc: (y) => nthWeekdayOfMonth(y, 10, 4, 4) },
-    "thanksgiving day": { group: "US Federal Holidays", calc: (y) => nthWeekdayOfMonth(y, 10, 4, 4) },
-    "christmas": { group: "US Federal Holidays", calc: (y) => (0, obsidian_1.moment)(new Date(y, 11, 25)) },
-    "christmas day": { group: "US Federal Holidays", calc: (y) => (0, obsidian_1.moment)(new Date(y, 11, 25)) },
+    "thanksgiving": {
+        group: "US Federal Holidays",
+        calc: (y) => nthWeekdayOfMonth(y, 10, 4, 4),
+        aliases: ["thanksgiving day"],
+    },
+    "christmas": {
+        group: "US Federal Holidays",
+        calc: (y) => (0, obsidian_1.moment)(new Date(y, 11, 25)),
+        aliases: ["christmas day"],
+    },
+    // US Cultural Holidays
+    "valentine's day": { group: "US Cultural Holidays", calc: (y) => (0, obsidian_1.moment)(new Date(y, 1, 14)) },
+    "halloween": { group: "US Cultural Holidays", calc: (y) => (0, obsidian_1.moment)(new Date(y, 9, 31)) },
+    "new year's eve": { group: "US Cultural Holidays", calc: (y) => (0, obsidian_1.moment)(new Date(y, 11, 31)) },
+    // Christian Holidays
+    "easter": { group: "Christian Holidays", calc: (y) => easter(y), aliases: ["easter sunday"] },
+    "good friday": { group: "Christian Holidays", calc: (y) => easter(y).subtract(2, "day") },
+    "ash wednesday": { group: "Christian Holidays", calc: (y) => easter(y).subtract(46, "day") },
 };
+const HOLIDAYS = {};
 const GROUP_HOLIDAYS = {};
-for (const [name, def] of Object.entries(HOLIDAYS)) {
+for (const [canon, def] of Object.entries(HOLIDAY_DEFS)) {
     if (!GROUP_HOLIDAYS[def.group])
         GROUP_HOLIDAYS[def.group] = [];
-    GROUP_HOLIDAYS[def.group].push(name);
+    GROUP_HOLIDAYS[def.group].push(canon);
+    HOLIDAYS[canon] = { ...def, canonical: canon };
+    for (const a of def.aliases || []) {
+        HOLIDAYS[a] = { group: def.group, calc: def.calc, canonical: canon };
+    }
 }
 const HOLIDAY_PHRASES = Object.keys(HOLIDAYS);
 const HOLIDAY_WORDS = Array.from(new Set(HOLIDAY_PHRASES.flatMap((p) => p.split(/\s+/).map((w) => w.toLowerCase()))));
 function holidayEnabled(name) {
+    const entry = HOLIDAYS[name];
+    if (!entry)
+        return true;
+    const canonical = entry.canonical;
     const overrides = phraseToMoment.holidayOverrides || {};
-    if (name in overrides)
-        return overrides[name];
+    if (canonical in overrides)
+        return overrides[canonical];
     const groups = phraseToMoment.holidayGroups || {};
-    const g = HOLIDAYS[name]?.group;
+    const g = entry.group;
     if (g && g in groups)
         return groups[g];
     return true;
@@ -539,11 +582,13 @@ class DynamicDates extends obsidian_1.Plugin {
         ];
     }
     isHolidayEnabled(name) {
-        const override = this.settings.holidayOverrides?.[name];
+        const entry = HOLIDAYS[name];
+        if (!entry)
+            return false;
+        const override = this.settings.holidayOverrides?.[entry.canonical];
         if (typeof override === 'boolean')
             return override;
-        const g = HOLIDAYS[name]?.group;
-        const grp = this.settings.holidayGroups?.[g];
+        const grp = this.settings.holidayGroups?.[entry.group];
         return grp !== false;
     }
     /** Return the canonical form for a custom phrase, if any. */
