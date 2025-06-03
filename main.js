@@ -787,12 +787,23 @@ class DynamicDates extends obsidian_1.Plugin {
             const tpl = this.app.vault.getAbstractFileByPath(daily.template);
             if (tpl) {
                 data = await this.app.vault.read(tpl);
+                data = this.renderDailyTemplate(data, date);
             }
         }
         if (folder && !this.app.vault.getAbstractFileByPath(folder)) {
             await this.app.vault.createFolder(folder);
         }
         await this.app.vault.create(path, data);
+    }
+    /** Apply the built-in Daily Note template variables to the given template string. */
+    renderDailyTemplate(tpl, date) {
+        const m = (0, obsidian_1.moment)(date, "YYYY-MM-DD");
+        const fmt = this.getDateFormat();
+        return tpl
+            .replace(/{{\s*date\s*}}/gi, m.format(fmt))
+            .replace(/{{\s*time\s*}}/gi, (0, obsidian_1.moment)().format("HH:mm"))
+            .replace(/{{\s*title\s*}}/gi, m.format(fmt))
+            .replace(/{{\s*date:(.+?)}}/gi, (_, f) => m.format(f.trim()));
     }
     convertText(text) {
         const phrases = [...this.allPhrases()].sort((a, b) => b.length - a.length);
