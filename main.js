@@ -772,12 +772,50 @@ class DynamicDates extends obsidian_1.Plugin {
     }
     convertText(text) {
         const phrases = [...this.allPhrases()].sort((a, b) => b.length - a.length);
-        for (const p of phrases) {
-            const esc = p.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-            const re = new RegExp(`\\b${esc}\\b`, "gi");
-            text = text.replace(re, (m) => this.linkForPhrase(m) ?? m);
+        const replace = (seg) => {
+            for (const p of phrases) {
+                const esc = p.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+                const re = new RegExp(`\\b${esc}\\b`, "gi");
+                seg = seg.replace(re, (m) => this.linkForPhrase(m) ?? m);
+            }
+            return seg;
+        };
+        const parts = [];
+        let i = 0;
+        while (i < text.length) {
+            if (text.startsWith("```", i)) {
+                const end = text.indexOf("```", i + 3);
+                const endIdx = end === -1 ? text.length : end + 3;
+                parts.push(text.slice(i, endIdx));
+                i = endIdx;
+                continue;
+            }
+            if (text[i] === "`") {
+                const end = text.indexOf("`", i + 1);
+                const endIdx = end === -1 ? text.length : end + 1;
+                parts.push(text.slice(i, endIdx));
+                i = endIdx;
+                continue;
+            }
+            if (text.startsWith("[[", i)) {
+                const end = text.indexOf("]]", i + 2);
+                const endIdx = end === -1 ? text.length : end + 2;
+                parts.push(text.slice(i, endIdx));
+                i = endIdx;
+                continue;
+            }
+            let j = i;
+            while (j < text.length &&
+                !text.startsWith("```", j) &&
+                text[j] !== "`" &&
+                !text.startsWith("[[", j)) {
+                j++;
+            }
+            const seg = text.slice(i, j);
+            parts.push(replace(seg));
+            i = j;
         }
-        return text;
+        return parts.join("");
     }
 }
 exports.default = DynamicDates;
