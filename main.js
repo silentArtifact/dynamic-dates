@@ -827,6 +827,7 @@ exports.default = DynamicDates;
 /** UI for the plugin settings displayed in Obsidian's settings pane. */
 class DDSettingTab extends obsidian_1.PluginSettingTab {
     plugin;
+    filter = "";
     constructor(app, plugin) {
         super(app, plugin);
         this.plugin = plugin;
@@ -854,12 +855,37 @@ class DDSettingTab extends obsidian_1.PluginSettingTab {
             await this.plugin.saveSettings();
         }));
         containerEl.createEl("h3", { text: "Holiday groups" });
+        const filterSetting = new obsidian_1.Setting(containerEl)
+            .setName("Filter holidays")
+            .addText(t => t.setPlaceholder("Type to filter")
+            .setValue(this.filter)
+            .onChange((v) => {
+            this.filter = v.toLowerCase();
+            this.display();
+        }));
+        filterSetting.settingEl.classList.add("dd-holiday-filter");
         Object.entries(GROUP_HOLIDAYS).forEach(([g, list]) => {
             const groupSetting = new obsidian_1.Setting(containerEl)
                 .setName(g)
                 .addToggle(t => t.setValue(this.plugin.settings.holidayGroups[g] ?? false)
                 .onChange(async (v) => {
                 this.plugin.settings.holidayGroups[g] = v;
+                await this.plugin.saveSettings();
+                this.display();
+            }))
+                .addExtraButton(b => b.setIcon("checkmark")
+                .setTooltip("Enable all")
+                .onClick(async () => {
+                this.plugin.settings.holidayGroups[g] = true;
+                list.forEach(h => this.plugin.settings.holidayOverrides[h] = true);
+                await this.plugin.saveSettings();
+                this.display();
+            }))
+                .addExtraButton(b => b.setIcon("cross")
+                .setTooltip("Disable all")
+                .onClick(async () => {
+                this.plugin.settings.holidayGroups[g] = false;
+                list.forEach(h => this.plugin.settings.holidayOverrides[h] = false);
                 await this.plugin.saveSettings();
                 this.display();
             }));
@@ -871,6 +897,8 @@ class DDSettingTab extends obsidian_1.PluginSettingTab {
                     if (m.isBefore(now, "day"))
                         m = HOLIDAYS[h].calc(now.year() + 1);
                     const label = h.split(/\s+/).map(w => properCase(w)).join(" ") + ` (${m.format("MMMM Do")})`;
+                    if (this.filter && !label.toLowerCase().includes(this.filter) && !h.toLowerCase().includes(this.filter))
+                        return;
                     const subSetting = new obsidian_1.Setting(containerEl)
                         .setName(label)
                         .addToggle(t => t.setValue(this.plugin.settings.holidayOverrides[h] ?? true)
