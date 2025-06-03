@@ -21,7 +21,7 @@ declare module "obsidian" {
     export class Plugin {
         app: App;
         registerEditorSuggest(s: EditorSuggest<any>): void;
-        registerDomEvent(el: any, type: string, cb: (ev: any) => any): void;
+        registerDomEvent(el: any, type: string, cb: (ev: any) => any, options?: any): void;
         addSettingTab(tab: PluginSettingTab): void;
         addCommand(cmd: any): void;
         loadData(): Promise<any>;
