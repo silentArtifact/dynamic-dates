@@ -310,7 +310,7 @@
   tSugg.context = { editor: { replaceRange:(t)=>inserted2.push(t), getLine:()=>'' }, start:{line:0,ch:0}, end:{line:0,ch:3}, query:'tom' };
   tSugg.selectSuggestion('2024-05-09', ev2);
   assert.ok(called2);
-  assert.strictEqual(inserted2.pop(), '[[Daily/2024-05-09]]');
+  assert.strictEqual(inserted2.pop(), '[[2024-05-09]]');
 
   /* ------------------------------------------------------------------ */
   /* load and save custom dates                                         */
