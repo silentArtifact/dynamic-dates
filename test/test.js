@@ -12,7 +12,7 @@
   if (!pluginSrc) throw new Error('DynamicDates class not found');
   const settingsSrc = code.match(/const DEFAULT_SETTINGS =[^]*?};/);
   if (!settingsSrc) throw new Error('DEFAULT_SETTINGS not found');
-  const helpersSrc = code.match(/function nthWeekdayOfMonth[^]*?function needsYearAlias[^]*?\n\}/);
+  const helpersSrc = code.match(/function nthWeekdayOfMonth[^]*?function needsYearAlias[^]*?function isHolidayQualifier[^]*?\n\}/);
   if (!helpersSrc) throw new Error('helper functions not found');
   const helpersCode = helpersSrc[0].replace(/const DEFAULT_SETTINGS[^]*?};/, '');
 
@@ -210,6 +210,11 @@
   sugg.context = { editor, start:{line:0,ch:0}, end:{line:0,ch:11}, query:'last may 1' };
   sugg.selectSuggestion('2024-05-01', new KeyboardEvent({ shiftKey:false, key:'Tab' }));
   assert.strictEqual(inserted.pop(), '[[2024-05-01|May 1st, 2024]]');
+
+  // holiday with qualifier should keep phrase
+  sugg.context = { editor, start:{line:0,ch:0}, end:{line:0,ch:14}, query:'last halloween' };
+  sugg.selectSuggestion('2023-10-31', new KeyboardEvent({ shiftKey:false, key:'Tab' }));
+  assert.strictEqual(inserted.pop(), '[[2023-10-31|last Halloween]]');
 
 
   /* ------------------------------------------------------------------ */

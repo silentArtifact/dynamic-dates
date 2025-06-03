@@ -349,6 +349,12 @@ function needsYearAlias(phrase: string): boolean {
         return /^(jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:tember)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)\s+\d{1,2}(?:st|nd|rd|th)?(?:,)?\s*\d{2,4}$/.test(lower);
 }
 
+function isHolidayQualifier(lower: string): boolean {
+        const m = lower.match(/^(last|next)\s+(.*)$/);
+        if (!m) return false;
+        return m[2] in HOLIDAYS;
+}
+
 const PHRASES = BASE_WORDS.flatMap((w) =>
         WEEKDAYS.includes(w) ? [w, `last ${w}`, `next ${w}`] : [w],
 ).concat(HOLIDAY_PHRASES);
@@ -608,6 +614,12 @@ class DDSuggest extends EditorSuggest<string> {
                                 p.startsWith(phrase) &&
                                 phraseToMoment(p)?.format("YYYY-MM-DD") === target,
                         );
+                if (!candidates.length && isHolidayQualifier(phrase)) {
+                        const m = phraseToMoment(phrase);
+                        if (m && m.format("YYYY-MM-DD") === target) {
+                                candidates.push(phrase);
+                        }
+                }
                 if (candidates.length) {
                         phrase = candidates.sort((a, b) => a.length - b.length)[0];
                 }
@@ -657,6 +669,12 @@ class DDSuggest extends EditorSuggest<string> {
                         p.startsWith(query.toLowerCase()) &&
                         phraseToMoment(p)?.format("YYYY-MM-DD") === targetDate
                 );
+                if (!candidates.length && isHolidayQualifier(query.toLowerCase())) {
+                        const m = phraseToMoment(query.toLowerCase());
+                        if (m && m.format("YYYY-MM-DD") === targetDate) {
+                                candidates.push(query.toLowerCase());
+                        }
+                }
 
 	
                 let phrase = query.toLowerCase();
