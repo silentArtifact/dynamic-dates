@@ -645,6 +645,9 @@ class DDSuggest extends obsidian_1.EditorSuggest {
             if (typeof ev.preventDefault === "function") {
                 ev.preventDefault();
             }
+            if (typeof ev.stopPropagation === "function") {
+                ev.stopPropagation();
+            }
         }
         editor.replaceRange(final, start, end);
         this.close();
@@ -653,6 +656,8 @@ class DDSuggest extends obsidian_1.EditorSuggest {
         if (this.context && ev.key === this.plugin.settings.acceptKey) {
             if (typeof ev.preventDefault === 'function')
                 ev.preventDefault();
+            if (typeof ev.stopPropagation === 'function')
+                ev.stopPropagation();
             const value = this._last[0];
             if (value)
                 this.selectSuggestion(value, ev);
@@ -720,7 +725,7 @@ class DynamicDates extends obsidian_1.Plugin {
         this.registerEditorSuggest(sugg);
         this.registerDomEvent(document, 'keydown', (ev) => {
             sugg.onKeyDown(ev);
-        });
+        }, { capture: true });
         this.addSettingTab(new DDSettingTab(this.app, this));
         this.addCommand({
             id: "convert-dates",

@@ -718,6 +718,9 @@ class DDSuggest extends EditorSuggest<string> {
                         if (typeof (ev as any).preventDefault === "function") {
                                 (ev as any).preventDefault();
                         }
+                        if (typeof (ev as any).stopPropagation === "function") {
+                                (ev as any).stopPropagation();
+                        }
                 }
 
                 editor.replaceRange(
@@ -733,6 +736,7 @@ class DDSuggest extends EditorSuggest<string> {
         onKeyDown(ev: KeyboardEvent): boolean {
                 if (this.context && ev.key === this.plugin.settings.acceptKey) {
                         if (typeof ev.preventDefault === 'function') ev.preventDefault();
+                        if (typeof ev.stopPropagation === 'function') ev.stopPropagation();
                         const value = this._last[0];
                         if (value) this.selectSuggestion(value, ev);
                         return true;
@@ -812,7 +816,7 @@ export default class DynamicDates extends Plugin {
                 this.registerEditorSuggest(sugg);
                 this.registerDomEvent(document, 'keydown', (ev: KeyboardEvent) => {
                         sugg.onKeyDown(ev);
-                });
+                }, { capture: true });
                 this.addSettingTab(new DDSettingTab(this.app, this));
                 this.addCommand({
                         id: "convert-dates",
