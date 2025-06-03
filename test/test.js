@@ -244,6 +244,18 @@
   const partial = lf.convertText('nottoday tomorrow');
   assert.strictEqual(partial, 'nottoday [[2024-05-09|tomorrow]]');
 
+  const fenced = lf.convertText('before\n```js\ncode tomorrow\n```\nafter tomorrow');
+  assert.strictEqual(fenced,
+    'before\n```js\ncode tomorrow\n```\nafter [[2024-05-09|tomorrow]]');
+
+  const inline = lf.convertText('This `code tomorrow` stays and tomorrow changes');
+  assert.strictEqual(inline,
+    'This `code tomorrow` stays and [[2024-05-09|tomorrow]] changes');
+
+  const linked = lf.convertText('already [[tomorrow]] here, but tomorrow also');
+  assert.strictEqual(linked,
+    'already [[tomorrow]] here, but [[2024-05-09|tomorrow]] also');
+
   /* ------------------------------------------------------------------ */
   /* onTrigger additional guard rails                                   */
   /* ------------------------------------------------------------------ */
