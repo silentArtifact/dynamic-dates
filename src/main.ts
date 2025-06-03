@@ -24,6 +24,7 @@ interface DDSettings {
         customDates: Record<string, string>;
         holidayGroups: Record<string, boolean>;
         holidayOverrides: Record<string, boolean>;
+        createMissingNotes: boolean;
 }
 
 /* ------------------------------------------------------------------ */
@@ -299,6 +300,7 @@ const DEFAULT_SETTINGS: DDSettings = {
         customDates: {},
         holidayGroups: Object.fromEntries(Object.keys(GROUP_HOLIDAYS).map(g => [g, false])),
         holidayOverrides: {},
+        createMissingNotes: false,
 };
 
 function isProperNoun(word: string): boolean {
@@ -651,7 +653,7 @@ class DDSuggest extends EditorSuggest<string> {
          * Replace the typed phrase with the selected wikilink and optionally
          * create the daily note on disk.
          */
-        selectSuggestion(value: string, ev: KeyboardEvent | MouseEvent) {
+        async selectSuggestion(value: string, ev: KeyboardEvent | MouseEvent) {
                 const { editor, start, end, query } = this.context!;
                 const { settings } = this.plugin;
 	
@@ -727,6 +729,10 @@ class DDSuggest extends EditorSuggest<string> {
                         end,
                 );
 
+                if (this.plugin.settings.createMissingNotes) {
+                        await this.plugin.ensureDailyNote(value);
+                }
+
 
                 this.close();
         }
@@ -736,7 +742,7 @@ class DDSuggest extends EditorSuggest<string> {
                         if (typeof ev.preventDefault === 'function') ev.preventDefault();
                         if (typeof ev.stopPropagation === 'function') ev.stopPropagation();
                         const value = this._last[0];
-                        if (value) this.selectSuggestion(value, ev);
+                        if (value) void this.selectSuggestion(value, ev);
                         return true;
                 }
                 return false;
@@ -862,6 +868,24 @@ export default class DynamicDates extends Plugin {
                 return `[[${value}|${alias}]]`;
         }
 
+        async ensureDailyNote(date: string): Promise<void> {
+                const folder = this.getDailyFolder();
+                const path = (folder ? folder + "/" : "") + `${date}.md`;
+                if (this.app.vault.getAbstractFileByPath(path)) return;
+                const daily = this.getDailySettings();
+                let data = "";
+                if (daily?.template) {
+                        const tpl = this.app.vault.getAbstractFileByPath(daily.template);
+                        if (tpl) {
+                                data = await this.app.vault.read(tpl as TFile);
+                        }
+                }
+                if (folder && !this.app.vault.getAbstractFileByPath(folder)) {
+                        await this.app.vault.createFolder(folder);
+                }
+                await this.app.vault.create(path, data);
+        }
+
         convertText(text: string): string {
                 const phrases = [...this.allPhrases()].sort((a, b) => b.length - a.length);
 
@@ -951,6 +975,16 @@ class DDSettingTab extends PluginSettingTab {
                                                 await this.plugin.saveSettings();
                                         }),
                         );
+
+                new Setting(containerEl)
+                        .setName("Create missing daily notes")
+                        .setDesc("Use the Daily Note template when a linked note doesn't exist")
+                        .addToggle(t =>
+                                t.setValue(this.plugin.settings.createMissingNotes)
+                                 .onChange(async (v:boolean) => {
+                                         this.plugin.settings.createMissingNotes = v;
+                                         await this.plugin.saveSettings();
+                                 }));
 
                 (containerEl as any).createEl("h3", { text: "Holiday groups" });
                 Object.entries(GROUP_HOLIDAYS).forEach(([g, list]) => {

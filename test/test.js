@@ -203,36 +203,36 @@
   const inserted = [];
   const editor = { getLine:()=>'', replaceRange:(t)=>inserted.push(t) };
   sugg.context = { editor, start:{line:0,ch:0}, end:{line:0,ch:3}, query:'tom' };
-  sugg.selectSuggestion('2024-05-09', new KeyboardEvent({ shiftKey:false, key:'Tab' }));
+  await sugg.selectSuggestion('2024-05-09', new KeyboardEvent({ shiftKey:false, key:'Tab' }));
   assert.strictEqual(inserted.pop(), '[[2024-05-09|tomorrow]]');
 
   sugg.context = { editor, start:{line:0,ch:0}, end:{line:0,ch:3}, query:'tom' };
-  sugg.selectSuggestion('2024-05-09', new KeyboardEvent({ shiftKey:true, key:'Tab' }));
+  await sugg.selectSuggestion('2024-05-09', new KeyboardEvent({ shiftKey:true, key:'Tab' }));
   assert.strictEqual(inserted.pop(), '[[2024-05-09]]');
 
   // preserve typed casing for non-proper words
   sugg.context = { editor, start:{line:0,ch:0}, end:{line:0,ch:8}, query:'tomorrow' };
-  sugg.selectSuggestion('2024-05-09', new KeyboardEvent({ shiftKey:false, key:'Tab' }));
+  await sugg.selectSuggestion('2024-05-09', new KeyboardEvent({ shiftKey:false, key:'Tab' }));
   assert.strictEqual(inserted.pop(), '[[2024-05-09|tomorrow]]');
 
   // ensure qualifiers remain lowercase
   sugg.context = { editor, start:{line:0,ch:0}, end:{line:0,ch:8}, query:'last thu' };
-  sugg.selectSuggestion('2024-05-02', new KeyboardEvent({ shiftKey:false, key:'Tab' }));
+  await sugg.selectSuggestion('2024-05-02', new KeyboardEvent({ shiftKey:false, key:'Tab' }));
   assert.strictEqual(inserted.pop(), '[[2024-05-02|last Thursday]]');
 
   // preserve user capitalization of qualifiers
   sugg.context = { editor, start:{line:0,ch:0}, end:{line:0,ch:8}, query:'Last thu' };
-  sugg.selectSuggestion('2024-05-02', new KeyboardEvent({ shiftKey:false, key:'Tab' }));
+  await sugg.selectSuggestion('2024-05-02', new KeyboardEvent({ shiftKey:false, key:'Tab' }));
   assert.strictEqual(inserted.pop(), '[[2024-05-02|Last Thursday]]');
 
   // month/day with qualifier should append year
   sugg.context = { editor, start:{line:0,ch:0}, end:{line:0,ch:11}, query:'last may 1' };
-  sugg.selectSuggestion('2024-05-01', new KeyboardEvent({ shiftKey:false, key:'Tab' }));
+  await sugg.selectSuggestion('2024-05-01', new KeyboardEvent({ shiftKey:false, key:'Tab' }));
   assert.strictEqual(inserted.pop(), '[[2024-05-01|May 1st, 2024]]');
 
   // holiday with qualifier should keep phrase
   sugg.context = { editor, start:{line:0,ch:0}, end:{line:0,ch:14}, query:'last halloween' };
-  sugg.selectSuggestion('2023-10-31', new KeyboardEvent({ shiftKey:false, key:'Tab' }));
+  await sugg.selectSuggestion('2023-10-31', new KeyboardEvent({ shiftKey:false, key:'Tab' }));
   assert.strictEqual(inserted.pop(), '[[2023-10-31|last Halloween]]');
 
 
@@ -297,12 +297,12 @@
   tPlugin.settings.acceptKey = 'Enter';
   const inserted2 = [];
   tSugg.context = { editor: { replaceRange:(t)=>inserted2.push(t), getLine:()=>'' }, start:{line:0,ch:0}, end:{line:0,ch:3}, query:'tom' };
-  tSugg.selectSuggestion('2024-05-09', new KeyboardEvent({ key:'Tab', shiftKey:false }));
+  await tSugg.selectSuggestion('2024-05-09', new KeyboardEvent({ key:'Tab', shiftKey:false }));
   assert.strictEqual(inserted2.length, 0);
   const ev1 = new KeyboardEvent({ key:'Enter', shiftKey:false });
   let called1 = false;
   ev1.preventDefault = () => { called1 = true; };
-  tSugg.selectSuggestion('2024-05-09', ev1);
+  await tSugg.selectSuggestion('2024-05-09', ev1);
   assert.ok(called1);
   assert.strictEqual(inserted2.pop(), '[[2024-05-09|tomorrow]]');
 
@@ -310,7 +310,7 @@
   let called2 = false;
   ev2.preventDefault = () => { called2 = true; };
   tSugg.context = { editor: { replaceRange:(t)=>inserted2.push(t), getLine:()=>'' }, start:{line:0,ch:0}, end:{line:0,ch:3}, query:'tom' };
-  tSugg.selectSuggestion('2024-05-09', ev2);
+  await tSugg.selectSuggestion('2024-05-09', ev2);
   assert.ok(called2);
   assert.strictEqual(inserted2.pop(), '[[2024-05-09]]');
 
@@ -390,6 +390,27 @@
   hPlugin.settings.holidayOverrides['martin luther king jr day'] = true;
   hPlugin.refreshHolidayMap();
   assert.ok(hPlugin.allPhrases().includes('mlk day'));
+
+  /* ------------------------------------------------------------------ */
+  /* createMissingNotes feature                                         */
+  /* ------------------------------------------------------------------ */
+  const files = { 'tpl.md': { path:'tpl.md', data:'TPLCONTENT' } };
+  const vlt = {
+    files,
+    getAbstractFileByPath(p){ return this.files[p] || null; },
+    createFolder(p){ this.files[p] = {}; },
+    read(f){ return this.files[f.path ?? f] && this.files[f.path ?? f].data || 'TPLCONTENT'; },
+    create(p,d){ this.files[p] = { path:p, data:d }; }
+  };
+  const cmPlugin = new DynamicDates();
+  cmPlugin.app = { vault: vlt, workspace:{} };
+  cmPlugin.settings = Object.assign({}, plugin.settings, { createMissingNotes: true });
+  cmPlugin.getDailySettings = () => ({ folder:'Daily', template:'tpl.md', format:'YYYY-MM-DD' });
+  const cmSugg = new DDSuggest(cmPlugin.app, cmPlugin);
+  cmSugg.context = { editor:{ replaceRange:()=>{}, getLine:()=>'' }, start:{line:0,ch:0}, end:{line:0,ch:3}, query:'tom' };
+  await cmSugg.selectSuggestion('2024-05-09', new KeyboardEvent({ key:'Tab', shiftKey:false }));
+  assert.ok(vlt.getAbstractFileByPath('Daily/2024-05-09.md'));
+  assert.strictEqual(vlt.getAbstractFileByPath('Daily/2024-05-09.md').data, 'TPLCONTENT');
 
   /* ------------------------------------------------------------------ */
   /* helper functions                                                   */
