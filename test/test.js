@@ -138,6 +138,10 @@
   assert.strictEqual(fmt(phraseToMoment('christmas of 2025')), '2025-12-25');
   assert.strictEqual(fmt(phraseToMoment("valentine's day")), '2025-02-14');
   assert.strictEqual(fmt(phraseToMoment('easter')), '2025-04-20');
+  assert.strictEqual(fmt(phraseToMoment('victoria day')), '2024-05-20');
+  assert.strictEqual(fmt(phraseToMoment('canada day')), '2024-07-01');
+  assert.strictEqual(fmt(phraseToMoment('canadian thanksgiving')), '2024-10-14');
+  assert.strictEqual(fmt(phraseToMoment('boxing day')), '2024-12-26');
 
   // holiday toggles
   phraseToMoment.holidayGroups = { 'US Federal Holidays': false };

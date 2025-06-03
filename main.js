@@ -49,6 +49,11 @@ function lastWeekdayOfMonth(year, month, weekday) {
     const diff = (last.weekday() - weekday + 7) % 7;
     return last.subtract(diff, "day");
 }
+function weekdayOnOrBefore(year, month, day, weekday) {
+    const target = (0, obsidian_1.moment)(new Date(year, month, day));
+    const diff = (target.weekday() - weekday + 7) % 7;
+    return target.subtract(diff, "day");
+}
 function easter(y) {
     const a = y % 19;
     const b = Math.floor(y / 100);
@@ -98,6 +103,16 @@ const HOLIDAY_DEFS = {
     "easter": { group: "Christian Holidays", calc: (y) => easter(y), aliases: ["easter sunday"] },
     "good friday": { group: "Christian Holidays", calc: (y) => easter(y).subtract(2, "day") },
     "ash wednesday": { group: "Christian Holidays", calc: (y) => easter(y).subtract(46, "day") },
+    // Canadian Federal Holidays
+    "canada day": { group: "Canadian Federal Holidays", calc: (y) => (0, obsidian_1.moment)(new Date(y, 6, 1)) },
+    "victoria day": { group: "Canadian Federal Holidays", calc: (y) => weekdayOnOrBefore(y, 4, 24, 1) },
+    "canadian thanksgiving": {
+        group: "Canadian Federal Holidays",
+        calc: (y) => nthWeekdayOfMonth(y, 9, 1, 2),
+        aliases: ["thanksgiving (canada)", "thanksgiving canada"],
+    },
+    // UK Bank Holidays
+    "boxing day": { group: "UK Bank Holidays", calc: (y) => (0, obsidian_1.moment)(new Date(y, 11, 26)) },
 };
 const HOLIDAYS = {};
 const GROUP_HOLIDAYS = {};
