@@ -698,7 +698,8 @@ class DynamicDates extends obsidian_1.Plugin {
             }
             catch { }
         }
-        return this.app.internalPlugins?.plugins?.["daily-notes"]?.instance?.options || {};
+        const dn = this.app.internalPlugins?.plugins?.["daily-notes"];
+        return dn?.instance?.options || dn?.options || {};
     }
     getDailyFolder() {
         const daily = this.getDailySettings();
@@ -802,7 +803,7 @@ class DynamicDates extends obsidian_1.Plugin {
         if (createDailyNote) {
             const m = (0, obsidian_1.moment)(date, this.getDateFormat());
             try {
-                await createDailyNote(m);
+                await createDailyNote(this.app, m);
             }
             catch { }
             if (!this.app.vault.getAbstractFileByPath(path)) {
@@ -813,7 +814,7 @@ class DynamicDates extends obsidian_1.Plugin {
             }
             if (!this.app.vault.getAbstractFileByPath(path)) {
                 try {
-                    await createDailyNote(this.app, m);
+                    await createDailyNote(m);
                 }
                 catch { }
             }

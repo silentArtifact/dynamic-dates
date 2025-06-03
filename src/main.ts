@@ -787,7 +787,8 @@ export default class DynamicDates extends Plugin {
                                 return mc.getDailyNoteSettings();
                         } catch {}
                 }
-                return (this.app as any).internalPlugins?.plugins?.["daily-notes"]?.instance?.options || {};
+                const dn = (this.app as any).internalPlugins?.plugins?.["daily-notes"];
+                return dn?.instance?.options || dn?.options || {};
         }
 
         getDailyFolder(): string {
@@ -893,7 +894,7 @@ export default class DynamicDates extends Plugin {
                 if (createDailyNote) {
                         const m = moment(date, this.getDateFormat());
                         try {
-                                await createDailyNote(m);
+                                await createDailyNote(this.app, m);
                         } catch {}
                         if (!this.app.vault.getAbstractFileByPath(path)) {
                                 try {
@@ -902,7 +903,7 @@ export default class DynamicDates extends Plugin {
                         }
                         if (!this.app.vault.getAbstractFileByPath(path)) {
                                 try {
-                                        await createDailyNote(this.app, m);
+                                        await createDailyNote(m);
                                 } catch {}
                         }
                         if (this.app.vault.getAbstractFileByPath(path)) return;
