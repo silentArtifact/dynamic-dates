@@ -65,6 +65,12 @@
         const suf = (day%10===1&&day!==11)?'st':(day%10===2&&day!==12)?'nd':(day%10===3&&day!==13)?'rd':'th';
         return months[this.d.getMonth()] + ' ' + day + suf + ', ' + this.d.getFullYear();
       }
+      if (fmt === 'HH:mm') {
+        return this.d.toISOString().slice(11,16);
+      }
+      if (fmt === 'YYYY') {
+        return String(this.d.getFullYear());
+      }
       return this.d.toISOString();
     }
   }
@@ -394,7 +400,7 @@
   /* ------------------------------------------------------------------ */
   /* createMissingNotes feature                                         */
   /* ------------------------------------------------------------------ */
-  const files = { 'tpl.md': { path:'tpl.md', data:'TPLCONTENT' } };
+  const files = { 'tpl.md': { path:'tpl.md', data:'Date {{date}} {{time}} {{title}} {{date:YYYY}}' } };
   const vlt = {
     files,
     getAbstractFileByPath(p){ return this.files[p] || null; },
@@ -410,7 +416,10 @@
   cmSugg.context = { editor:{ replaceRange:()=>{}, getLine:()=>'' }, start:{line:0,ch:0}, end:{line:0,ch:3}, query:'tom' };
   await cmSugg.selectSuggestion('2024-05-09', new KeyboardEvent({ key:'Tab', shiftKey:false }));
   assert.ok(vlt.getAbstractFileByPath('Daily/2024-05-09.md'));
-  assert.strictEqual(vlt.getAbstractFileByPath('Daily/2024-05-09.md').data, 'TPLCONTENT');
+  assert.strictEqual(
+    vlt.getAbstractFileByPath('Daily/2024-05-09.md').data,
+    'Date 2024-05-09 00:00 2024-05-09 2024'
+  );
 
   /* ------------------------------------------------------------------ */
   /* helper functions                                                   */

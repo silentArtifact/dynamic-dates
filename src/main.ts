@@ -878,12 +878,24 @@ export default class DynamicDates extends Plugin {
                         const tpl = this.app.vault.getAbstractFileByPath(daily.template);
                         if (tpl) {
                                 data = await this.app.vault.read(tpl as TFile);
+                                data = this.renderDailyTemplate(data, date);
                         }
                 }
                 if (folder && !this.app.vault.getAbstractFileByPath(folder)) {
                         await this.app.vault.createFolder(folder);
                 }
                 await this.app.vault.create(path, data);
+        }
+
+        /** Apply the built-in Daily Note template variables to the given template string. */
+        renderDailyTemplate(tpl: string, date: string): string {
+                const m = moment(date, "YYYY-MM-DD");
+                const fmt = this.getDateFormat();
+                return tpl
+                        .replace(/{{\s*date\s*}}/gi, m.format(fmt))
+                        .replace(/{{\s*time\s*}}/gi, moment().format("HH:mm"))
+                        .replace(/{{\s*title\s*}}/gi, m.format(fmt))
+                        .replace(/{{\s*date:(.+?)}}/gi, (_, f) => m.format(f.trim()));
         }
 
         convertText(text: string): string {
