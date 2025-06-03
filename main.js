@@ -244,6 +244,7 @@ const DEFAULT_SETTINGS = {
     customDates: {},
     holidayGroups: Object.fromEntries(Object.keys(GROUP_HOLIDAYS).map(g => [g, false])),
     holidayOverrides: {},
+    createMissingNotes: false,
 };
 function isProperNoun(word) {
     const w = word.toLowerCase();
@@ -581,7 +582,7 @@ class DDSuggest extends obsidian_1.EditorSuggest {
      * Replace the typed phrase with the selected wikilink and optionally
      * create the daily note on disk.
      */
-    selectSuggestion(value, ev) {
+    async selectSuggestion(value, ev) {
         const { editor, start, end, query } = this.context;
         const { settings } = this.plugin;
         /* ----------------------------------------------------------------
@@ -648,6 +649,9 @@ class DDSuggest extends obsidian_1.EditorSuggest {
             }
         }
         editor.replaceRange(final, start, end);
+        if (this.plugin.settings.createMissingNotes) {
+            await this.plugin.ensureDailyNote(value);
+        }
         this.close();
     }
     onKeyDown(ev) {
@@ -658,7 +662,7 @@ class DDSuggest extends obsidian_1.EditorSuggest {
                 ev.stopPropagation();
             const value = this._last[0];
             if (value)
-                this.selectSuggestion(value, ev);
+                void this.selectSuggestion(value, ev);
             return true;
         }
         return false;
@@ -772,6 +776,24 @@ class DynamicDates extends obsidian_1.Plugin {
         }
         return `[[${value}|${alias}]]`;
     }
+    async ensureDailyNote(date) {
+        const folder = this.getDailyFolder();
+        const path = (folder ? folder + "/" : "") + `${date}.md`;
+        if (this.app.vault.getAbstractFileByPath(path))
+            return;
+        const daily = this.getDailySettings();
+        let data = "";
+        if (daily?.template) {
+            const tpl = this.app.vault.getAbstractFileByPath(daily.template);
+            if (tpl) {
+                data = await this.app.vault.read(tpl);
+            }
+        }
+        if (folder && !this.app.vault.getAbstractFileByPath(folder)) {
+            await this.app.vault.createFolder(folder);
+        }
+        await this.app.vault.create(path, data);
+    }
     convertText(text) {
         const phrases = [...this.allPhrases()].sort((a, b) => b.length - a.length);
         const replace = (seg) => {
@@ -848,6 +870,14 @@ class DDSettingTab extends obsidian_1.PluginSettingTab {
             .setValue(this.plugin.settings.noAliasWithShift)
             .onChange(async (v) => {
             this.plugin.settings.noAliasWithShift = v;
+            await this.plugin.saveSettings();
+        }));
+        new obsidian_1.Setting(containerEl)
+            .setName("Create missing daily notes")
+            .setDesc("Use the Daily Note template when a linked note doesn't exist")
+            .addToggle(t => t.setValue(this.plugin.settings.createMissingNotes)
+            .onChange(async (v) => {
+            this.plugin.settings.createMissingNotes = v;
             await this.plugin.saveSettings();
         }));
         containerEl.createEl("h3", { text: "Holiday groups" });
