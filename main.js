@@ -773,7 +773,6 @@ class DynamicDates extends obsidian_1.Plugin {
         if (!m)
             return null;
         const value = m.format(this.getDateFormat());
-        const targetDate = m.format("YYYY-MM-DD");
         const custom = this.customCanonical(phrase);
         let alias;
         if (custom) {
