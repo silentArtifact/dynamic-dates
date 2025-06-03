@@ -39,6 +39,11 @@ const MONTHS = [
     "november",
     "december",
 ];
+const MONTH_ABBR = MONTHS.map(m => m.slice(0, 3));
+function expandMonthName(name) {
+    const idx = MONTH_ABBR.indexOf(name.slice(0, 3).toLowerCase());
+    return idx >= 0 ? MONTHS[idx] : name;
+}
 function nthWeekdayOfMonth(year, month, weekday, n) {
     const first = (0, obsidian_1.moment)(new Date(year, month, 1));
     const diff = (weekday - first.weekday() + 7) % 7;
@@ -376,11 +381,7 @@ function phraseToMoment(phrase) {
     }
     const mdy = lower.match(/^(jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:tember)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)\s+(\d{1,2})(?:st|nd|rd|th)?(?:,)?\s*(\d{2,4})$/i);
     if (mdy) {
-        let monthName = mdy[1];
-        if (monthName.length <= 3) {
-            const idx = ["jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec"].indexOf(monthName.slice(0, 3));
-            monthName = ["january", "february", "march", "april", "may", "june", "july", "august", "september", "october", "november", "december"][idx];
-        }
+        let monthName = expandMonthName(mdy[1]);
         const dayNum = parseInt(mdy[2]);
         let yearNum = parseInt(mdy[3]);
         if (!isNaN(dayNum) && !isNaN(yearNum)) {
@@ -395,11 +396,7 @@ function phraseToMoment(phrase) {
     }
     const lastMd = lower.match(/^last\s+(jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:tember)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)\s+(\d{1,2}\w*)$/i);
     if (lastMd) {
-        let monthName = lastMd[1];
-        if (monthName.length <= 3) {
-            const idx = ["jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec"].indexOf(monthName.slice(0, 3));
-            monthName = ["january", "february", "march", "april", "may", "june", "july", "august", "september", "october", "november", "december"][idx];
-        }
+        let monthName = expandMonthName(lastMd[1]);
         const dayNum = parseInt(lastMd[2]);
         if (!isNaN(dayNum)) {
             const target = now.clone().month(monthName).date(dayNum);
@@ -442,11 +439,7 @@ function phraseToMoment(phrase) {
     // Month + day (e.g., "august 20" or "aug 20th")
     const md = lower.match(/^(jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:tember)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)\s+(\d{1,2}\w*)$/i);
     if (md) {
-        let monthName = md[1];
-        if (monthName.length <= 3) {
-            const idx = ["jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec"].indexOf(monthName.slice(0, 3));
-            monthName = ["january", "february", "march", "april", "may", "june", "july", "august", "september", "october", "november", "december"][idx];
-        }
+        let monthName = expandMonthName(md[1]);
         const dayNum = parseInt(md[2]);
         if (!isNaN(dayNum)) {
             const target = now.clone().month(monthName).date(dayNum);

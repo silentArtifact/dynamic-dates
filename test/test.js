@@ -91,6 +91,8 @@
   const obsidian_1 = { moment, EditorSuggest, KeyboardEvent, Plugin, PluginSettingTab, Setting };
   const context = { moment, WEEKDAYS, MONTHS, BASE_WORDS, EditorSuggest, KeyboardEvent, Plugin, PluginSettingTab, Setting, obsidian_1 };
   vm.createContext(context);
+  vm.runInContext('this.MONTH_ABBR = this.MONTHS.map(m => m.slice(0,3));', context);
+  vm.runInContext('this.expandMonthName = function(name){ const idx = this.MONTH_ABBR.indexOf(name.slice(0,3).toLowerCase()); return idx >= 0 ? this.MONTHS[idx] : name; };', context);
   vm.runInContext(helpersCode, context);
   vm.runInContext('this.HOLIDAY_PHRASES = HOLIDAY_PHRASES;', context);
   vm.runInContext('this.PHRASES = this.BASE_WORDS.flatMap(w => this.WEEKDAYS.includes(w) ? [w, "last " + w, "next " + w] : [w]).concat(this.HOLIDAY_PHRASES.flatMap(h => [h, "last " + h, "next " + h]));', context);
