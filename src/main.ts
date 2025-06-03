@@ -891,7 +891,7 @@ export default class DynamicDates extends Plugin {
                         createDailyNote = (this.app as any).internalPlugins?.plugins?.["daily-notes"]?.instance?.createDailyNote;
                 }
                 if (createDailyNote) {
-                        const m = moment(date, "YYYY-MM-DD");
+                        const m = moment(date, this.getDateFormat());
                         try {
                                 await createDailyNote(m);
                         } catch {}
@@ -926,7 +926,7 @@ export default class DynamicDates extends Plugin {
 
         /** Apply the built-in Daily Note template variables to the given template string. */
         renderDailyTemplate(tpl: string, date: string): string {
-                const m = moment(date, "YYYY-MM-DD");
+                const m = moment(date, this.getDateFormat());
                 const fmt = this.getDateFormat();
                 return tpl
                         .replace(/{{\s*date\s*}}/gi, m.format(fmt))

@@ -800,7 +800,7 @@ class DynamicDates extends obsidian_1.Plugin {
             createDailyNote = this.app.internalPlugins?.plugins?.["daily-notes"]?.instance?.createDailyNote;
         }
         if (createDailyNote) {
-            const m = (0, obsidian_1.moment)(date, "YYYY-MM-DD");
+            const m = (0, obsidian_1.moment)(date, this.getDateFormat());
             try {
                 await createDailyNote(m);
             }
@@ -837,7 +837,7 @@ class DynamicDates extends obsidian_1.Plugin {
     }
     /** Apply the built-in Daily Note template variables to the given template string. */
     renderDailyTemplate(tpl, date) {
-        const m = (0, obsidian_1.moment)(date, "YYYY-MM-DD");
+        const m = (0, obsidian_1.moment)(date, this.getDateFormat());
         const fmt = this.getDateFormat();
         return tpl
             .replace(/{{\s*date\s*}}/gi, m.format(fmt))
