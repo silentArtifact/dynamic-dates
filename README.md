@@ -8,7 +8,7 @@ Dynamic Dates is an Obsidian plugin that turns natural language phrases such as 
 - Insert a wiki link to your daily note using <kbd>Tab</kbd> or <kbd>Enter</kbd>.
 - Define your own phrases (e.g. `Mid Year`) that map to a specific calendar date.
 - Convert an entire note's text to date links via the `Convert natural-language dates` command.
-- Built-in awareness of common U.S. holidays like **Memorial Day** and **Thanksgiving**, with settings to enable or disable entire holiday groups or individual holidays.
+- Built-in awareness of holidays across multiple regions, including U.S., Canadian, U.K., Islamic and Jewish observances, with settings to enable or disable entire holiday groups or individual holidays.
 
 ## Building
 

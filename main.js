@@ -49,6 +49,11 @@ function lastWeekdayOfMonth(year, month, weekday) {
     const diff = (last.weekday() - weekday + 7) % 7;
     return last.subtract(diff, "day");
 }
+function weekdayOnOrBefore(year, month, day, weekday) {
+    const target = (0, obsidian_1.moment)(new Date(year, month, day));
+    const diff = (target.weekday() - weekday + 7) % 7;
+    return target.subtract(diff, "day");
+}
 function easter(y) {
     const a = y % 19;
     const b = Math.floor(y / 100);
@@ -65,6 +70,89 @@ function easter(y) {
     const month = Math.floor((h + l - 7 * m + 114) / 31) - 1;
     const day = ((h + l - 7 * m + 114) % 31) + 1;
     return (0, obsidian_1.moment)(new Date(y, month, day));
+}
+/* ------------------------------------------------------------------ */
+/* Lunar calendar helpers                                             */
+/* ------------------------------------------------------------------ */
+function jdToGregorian(jd) {
+    let w = jd + 0.5;
+    let Z = Math.floor(w);
+    let F = w - Z;
+    let A = Z;
+    if (Z >= 2299161) {
+        const alpha = Math.floor((Z - 1867216.25) / 36524.25);
+        A = Z + 1 + alpha - Math.floor(alpha / 4);
+    }
+    const B = A + 1524;
+    const C = Math.floor((B - 122.1) / 365.25);
+    const D = Math.floor(365.25 * C);
+    const E = Math.floor((B - D) / 30.6001);
+    const day = B - D - Math.floor(30.6001 * E) + F;
+    const month = E < 14 ? E - 1 : E - 13;
+    const year = month > 2 ? C - 4716 : C - 4715;
+    return { year, month, day: Math.floor(day) };
+}
+function islamicYearForGregorian(gYear) {
+    return Math.floor((gYear - 622) * 33 / 32);
+}
+function islamicToMoment(year, month, day) {
+    const jd = day +
+        Math.ceil(29.5 * (month - 1)) +
+        (year - 1) * 354 +
+        Math.floor((3 + 11 * year) / 30) +
+        1948439 -
+        1;
+    const g = jdToGregorian(jd);
+    return (0, obsidian_1.moment)(new Date(g.year, g.month - 1, g.day));
+}
+const HEBREW_EPOCH = 347996.5;
+function hebrewLeap(year) {
+    return ((7 * year + 1) % 19) < 7;
+}
+function hebrewYearMonths(year) {
+    return hebrewLeap(year) ? 13 : 12;
+}
+function hebrewElapsedDays(year) {
+    const months = Math.floor((235 * year - 234) / 19);
+    const parts = 204 + 793 * (months % 1080);
+    const hours = 5 + 12 * months + 793 * Math.floor(months / 1080) + Math.floor(parts / 1080);
+    let day = 1 + 29 * months + Math.floor(hours / 24);
+    const partsRem = 1080 * (hours % 24) + (parts % 1080);
+    if (partsRem >= 19440 ||
+        (day % 7 === 2 && partsRem >= 9924 && !hebrewLeap(year)) ||
+        (day % 7 === 1 && partsRem >= 16789 && hebrewLeap(year - 1))) {
+        day += 1;
+    }
+    if (day % 7 === 0 || day % 7 === 3 || day % 7 === 5)
+        day += 1;
+    return day;
+}
+function hebrewYearLength(year) {
+    return hebrewElapsedDays(year + 1) - hebrewElapsedDays(year);
+}
+function hebrewMonthDays(year, month) {
+    if (month === 2 || month === 4 || month === 6 || month === 10 || month === 13 || (month === 12 && !hebrewLeap(year)))
+        return 29;
+    if (month === 8 && hebrewYearLength(year) % 10 !== 5)
+        return 29;
+    if (month === 9 && hebrewYearLength(year) % 10 === 3)
+        return 29;
+    return 30;
+}
+function hebrewToMoment(year, month, day) {
+    let jd = HEBREW_EPOCH + hebrewElapsedDays(year) + day - 1;
+    if (month < 7) {
+        for (let m = 7; m <= hebrewYearMonths(year); m++)
+            jd += hebrewMonthDays(year, m);
+        for (let m = 1; m < month; m++)
+            jd += hebrewMonthDays(year, m);
+    }
+    else {
+        for (let m = 7; m < month; m++)
+            jd += hebrewMonthDays(year, m);
+    }
+    const g = jdToGregorian(jd);
+    return (0, obsidian_1.moment)(new Date(g.year, g.month - 1, g.day));
 }
 const HOLIDAY_DEFS = {
     "new year's day": { group: "US Federal Holidays", calc: (y) => (0, obsidian_1.moment)(new Date(y, 0, 1)) },
@@ -98,6 +186,24 @@ const HOLIDAY_DEFS = {
     "easter": { group: "Christian Holidays", calc: (y) => easter(y), aliases: ["easter sunday"] },
     "good friday": { group: "Christian Holidays", calc: (y) => easter(y).subtract(2, "day") },
     "ash wednesday": { group: "Christian Holidays", calc: (y) => easter(y).subtract(46, "day") },
+    // Canadian Federal Holidays
+    "canada day": { group: "Canadian Federal Holidays", calc: (y) => (0, obsidian_1.moment)(new Date(y, 6, 1)) },
+    "victoria day": { group: "Canadian Federal Holidays", calc: (y) => weekdayOnOrBefore(y, 4, 24, 1) },
+    "canadian thanksgiving": {
+        group: "Canadian Federal Holidays",
+        calc: (y) => nthWeekdayOfMonth(y, 9, 1, 2),
+        aliases: ["thanksgiving (canada)", "thanksgiving canada"],
+    },
+    // UK Bank Holidays
+    "boxing day": { group: "UK Bank Holidays", calc: (y) => (0, obsidian_1.moment)(new Date(y, 11, 26)) },
+    // Islamic Holidays
+    "ramadan start": { group: "Islamic Holidays", calc: (y) => islamicToMoment(islamicYearForGregorian(y), 9, 1) },
+    "eid al-fitr": { group: "Islamic Holidays", calc: (y) => islamicToMoment(islamicYearForGregorian(y), 10, 1) },
+    "eid al-adha": { group: "Islamic Holidays", calc: (y) => islamicToMoment(islamicYearForGregorian(y), 12, 10) },
+    // Jewish Holidays
+    "rosh hashanah": { group: "Jewish Holidays", calc: (y) => hebrewToMoment(y + 3761, 7, 1) },
+    "yom kippur": { group: "Jewish Holidays", calc: (y) => hebrewToMoment(y + 3761, 7, 10) },
+    "passover": { group: "Jewish Holidays", calc: (y) => hebrewToMoment(y + 3760, 1, 15) },
 };
 const HOLIDAYS = {};
 const GROUP_HOLIDAYS = {};

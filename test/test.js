@@ -138,6 +138,16 @@
   assert.strictEqual(fmt(phraseToMoment('christmas of 2025')), '2025-12-25');
   assert.strictEqual(fmt(phraseToMoment("valentine's day")), '2025-02-14');
   assert.strictEqual(fmt(phraseToMoment('easter')), '2025-04-20');
+  assert.strictEqual(fmt(phraseToMoment('victoria day')), '2024-05-20');
+  assert.strictEqual(fmt(phraseToMoment('canada day')), '2024-07-01');
+  assert.strictEqual(fmt(phraseToMoment('canadian thanksgiving')), '2024-10-14');
+  assert.strictEqual(fmt(phraseToMoment('boxing day')), '2024-12-26');
+  assert.strictEqual(fmt(phraseToMoment('ramadan start')), '2025-02-28');
+  assert.strictEqual(fmt(phraseToMoment('eid al-fitr')), '2025-03-30');
+  assert.strictEqual(fmt(phraseToMoment('eid al-adha')), '2024-06-16');
+  assert.strictEqual(fmt(phraseToMoment('rosh hashanah')), '2024-10-03');
+  assert.strictEqual(fmt(phraseToMoment('yom kippur')), '2024-10-12');
+  assert.strictEqual(fmt(phraseToMoment('passover')), '2025-04-13');
 
   // holiday toggles
   phraseToMoment.holidayGroups = { 'US Federal Holidays': false };
@@ -319,7 +329,7 @@
   const list = cSugg.getSuggestions({ query:'fall st' });
   assert.ok(list.includes('2024-08-22'));
   const converted2 = cPlugin.convertText('see you fall start');
-  assert.strictEqual(converted2, 'see you [[2024-08-22|fall start]]');
+  assert.strictEqual(converted2, 'see you [[2024-08-22|fall Start]]');
 
   cPlugin.settings.customDates['Big Event'] = '02-03';
   phraseToMoment.customDates = Object.fromEntries(Object.entries(cPlugin.settings.customDates).map(([k,v])=>[k.toLowerCase(),v]));
