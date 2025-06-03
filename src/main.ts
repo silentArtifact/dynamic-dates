@@ -363,6 +363,18 @@ function isHolidayQualifier(lower: string): boolean {
         return m[2] in HOLIDAYS;
 }
 
+function formatTypedPhrase(phrase: string): string {
+        return phrase
+                .split(/\s+/)
+                .map((w) =>
+                        w
+                                .split("-")
+                                .map((p) => (isProperNoun(p) ? properCase(p) : p))
+                                .join("-")
+                )
+                .join(" ");
+}
+
 const PHRASES = BASE_WORDS.flatMap((w) =>
         WEEKDAYS.includes(w) ? [w, `last ${w}`, `next ${w}`] : [w],
 ).concat(HOLIDAY_PHRASES);
@@ -674,26 +686,30 @@ class DDSuggest extends EditorSuggest<string> {
                 const custom = this.plugin.customCanonical(phrase);
                 let alias: string;
 
-                if (candidates.length) {
-                        phrase = candidates.sort((a, b) => a.length - b.length)[0];
-                        const canonical = this.plugin.customCanonical(phrase);
-                        if (canonical) {
-                                alias = canonical;
+               if (candidates.length) {
+                       phrase = candidates.sort((a, b) => a.length - b.length)[0];
+                       const canonical = this.plugin.customCanonical(phrase);
+                       if (canonical) {
+                               alias = canonical;
+                       } else {
+                               const typedWords = query.split(/\s+/);
+                               const phraseWords = phrase.split(/\s+/);
+                               alias = phraseWords
+                                       .map((w, i) => {
+                                               const t = typedWords[i];
+                                               if (["last", "next"].includes(w.toLowerCase()) && t) return t;
+                                               return formatWord(w, t);
+                                       })
+                                       .join(" ");
+                       }
+               } else {
+                        if (phraseToMoment(query.toLowerCase()) && !needsYearAlias(query)) {
+                                alias = formatTypedPhrase(query);
                         } else {
-                                const typedWords = query.split(/\s+/);
-                                const phraseWords = phrase.split(/\s+/);
-                                alias = phraseWords
-                                        .map((w, i) => {
-                                                const t = typedWords[i];
-                                                if (["last", "next"].includes(w.toLowerCase()) && t) return t;
-                                                return formatWord(w, t);
-                                        })
-                                        .join(" ");
+                                const fmt = needsYearAlias(query) ? "MMMM Do, YYYY" : "MMMM Do";
+                                alias = moment(target, "YYYY-MM-DD").format(fmt);
                         }
-                } else {
-                        const fmt = needsYearAlias(query) ? "MMMM Do, YYYY" : "MMMM Do";
-                        alias = moment(target, "YYYY-MM-DD").format(fmt);
-                }
+               }
                 const niceDate = moment(target, "YYYY-MM-DD").format("MMMM Do, YYYY");
                 el.createDiv({ text: `${niceDate} (${alias})` });
         }
@@ -746,8 +762,12 @@ class DDSuggest extends EditorSuggest<string> {
                                         .join(" ");
                         }
                 } else {
-                        const fmt = needsYearAlias(query) ? "MMMM Do, YYYY" : "MMMM Do";
-                        alias = moment(targetDate, "YYYY-MM-DD").format(fmt);
+                        if (phraseToMoment(query.toLowerCase()) && !needsYearAlias(query)) {
+                                alias = formatTypedPhrase(query);
+                        } else {
+                                const fmt = needsYearAlias(query) ? "MMMM Do, YYYY" : "MMMM Do";
+                                alias = moment(targetDate, "YYYY-MM-DD").format(fmt);
+                        }
                 }
 		/* ----------------------------------------------------------------
 		   2. Build the wikilink with alias

@@ -12,9 +12,11 @@
   if (!pluginSrc) throw new Error('DynamicDates class not found');
   const settingsSrc = code.match(/const DEFAULT_SETTINGS =[^]*?};/);
   if (!settingsSrc) throw new Error('DEFAULT_SETTINGS not found');
-  const helpersSrc = code.match(/function nthWeekdayOfMonth[^]*?function needsYearAlias[^]*?function isHolidayQualifier[^]*?\n\}/);
+  const helpersSrc = code.match(/function nthWeekdayOfMonth[^]*?function needsYearAlias[^]*?function isHolidayQualifier[^]*?function formatTypedPhrase[^]*?\nconst PHRASES/);
   if (!helpersSrc) throw new Error('helper functions not found');
-  const helpersCode = helpersSrc[0].replace(/const DEFAULT_SETTINGS[^]*?};/, '');
+  const helpersCode = helpersSrc[0]
+    .replace(/const DEFAULT_SETTINGS[^]*?};/, '')
+    .replace(/\nconst PHRASES[^]*/, '');
 
   /* ------------------------------------------------------------------ */
   /* Minimal runtime stubs                                              */
@@ -253,6 +255,15 @@
   sugg.context = { editor, start:{line:0,ch:0}, end:{line:0,ch:14}, query:'last halloween' };
   await sugg.selectSuggestion('2023-10-31', new KeyboardEvent({ shiftKey:false, key:'Tab' }));
   assert.strictEqual(inserted.pop(), '[[2023-10-31|last Halloween]]');
+
+  // nth weekday phrases should keep typed phrasing
+  sugg.context = {
+    editor,
+    start:{line:0,ch:0}, end:{line:0,ch:21},
+    query:'The last Friday in June'
+  };
+  await sugg.selectSuggestion('2024-06-28', new KeyboardEvent({ shiftKey:false, key:'Tab' }));
+  assert.strictEqual(inserted.pop(), '[[2024-06-28|The last Friday in June]]');
 
 
   /* ------------------------------------------------------------------ */

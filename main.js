@@ -307,6 +307,15 @@ function isHolidayQualifier(lower) {
         return false;
     return m[2] in HOLIDAYS;
 }
+function formatTypedPhrase(phrase) {
+    return phrase
+        .split(/\s+/)
+        .map((w) => w
+        .split("-")
+        .map((p) => (isProperNoun(p) ? properCase(p) : p))
+        .join("-"))
+        .join(" ");
+}
 const PHRASES = BASE_WORDS.flatMap((w) => WEEKDAYS.includes(w) ? [w, `last ${w}`, `next ${w}`] : [w]).concat(HOLIDAY_PHRASES);
 /**
  * Convert a natural-language phrase into a moment date instance.
@@ -624,8 +633,13 @@ class DDSuggest extends obsidian_1.EditorSuggest {
             }
         }
         else {
-            const fmt = needsYearAlias(query) ? "MMMM Do, YYYY" : "MMMM Do";
-            alias = (0, obsidian_1.moment)(target, "YYYY-MM-DD").format(fmt);
+            if (phraseToMoment(query.toLowerCase()) && !needsYearAlias(query)) {
+                alias = formatTypedPhrase(query);
+            }
+            else {
+                const fmt = needsYearAlias(query) ? "MMMM Do, YYYY" : "MMMM Do";
+                alias = (0, obsidian_1.moment)(target, "YYYY-MM-DD").format(fmt);
+            }
         }
         const niceDate = (0, obsidian_1.moment)(target, "YYYY-MM-DD").format("MMMM Do, YYYY");
         el.createDiv({ text: `${niceDate} (${alias})` });
@@ -675,8 +689,13 @@ class DDSuggest extends obsidian_1.EditorSuggest {
             }
         }
         else {
-            const fmt = needsYearAlias(query) ? "MMMM Do, YYYY" : "MMMM Do";
-            alias = (0, obsidian_1.moment)(targetDate, "YYYY-MM-DD").format(fmt);
+            if (phraseToMoment(query.toLowerCase()) && !needsYearAlias(query)) {
+                alias = formatTypedPhrase(query);
+            }
+            else {
+                const fmt = needsYearAlias(query) ? "MMMM Do, YYYY" : "MMMM Do";
+                alias = (0, obsidian_1.moment)(targetDate, "YYYY-MM-DD").format(fmt);
+            }
         }
         /* ----------------------------------------------------------------
            2. Build the wikilink with alias
