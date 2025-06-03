@@ -25,7 +25,6 @@ interface DDSettings {
         customDates: Record<string, string>;
         holidayGroups: Record<string, boolean>;
         holidayOverrides: Record<string, boolean>;
-        createMissingNotes: boolean;
 }
 
 /* ------------------------------------------------------------------ */
@@ -301,7 +300,6 @@ const DEFAULT_SETTINGS: DDSettings = {
         customDates: {},
         holidayGroups: Object.fromEntries(Object.keys(GROUP_HOLIDAYS).map(g => [g, false])),
         holidayOverrides: {},
-        createMissingNotes: false,
 };
 
 function isProperNoun(word: string): boolean {
@@ -730,11 +728,6 @@ class DDSuggest extends EditorSuggest<string> {
                         end,
                 );
 
-                if (this.plugin.settings.createMissingNotes) {
-                        await this.plugin.ensureDailyNote(value);
-                }
-
-
                 this.close();
         }
 
@@ -871,61 +864,6 @@ export default class DynamicDates extends Plugin {
                 return `[[${value}|${alias}]]`;
         }
 
-        async ensureDailyNote(date: string): Promise<void> {
-                const folder = this.getDailyFolder();
-                const path = (folder ? folder + "/" : "") + `${date}.md`;
-                if (this.app.vault.getAbstractFileByPath(path)) return;
-
-                // Try to delegate to the Daily Notes plugin if possible so that
-                // the user's configured template (and any integrations like the
-                // Templates core plugin) are correctly applied.
-                let createDailyNote: any;
-                const hasReq = typeof (globalThis as any).require === 'function';
-                if (hasReq) {
-                        try {
-                                // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-var-requires
-                                const mod = (globalThis as any).require('obsidian-daily-notes-interface');
-                                createDailyNote = mod?.createDailyNote;
-                        } catch {}
-                }
-                if (!createDailyNote) {
-                        createDailyNote = (this.app as any).internalPlugins?.plugins?.["daily-notes"]?.instance?.createDailyNote;
-                }
-                if (createDailyNote) {
-                        const m = moment(date, this.getDateFormat());
-                        try {
-                                await createDailyNote(this.app, m);
-                        } catch {}
-                        if (this.app.vault.getAbstractFileByPath(path)) return;
-                }
-
-                const daily = this.getDailySettings();
-                let data = "";
-                if (daily?.template) {
-                        const tplPath = normalizePath(daily.template);
-                        const tpl = this.app.vault.getAbstractFileByPath(tplPath);
-                        if (tpl) {
-                                data = await this.app.vault.read(tpl as TFile);
-                                data = this.renderDailyTemplate(data, date);
-                        }
-                }
-                if (folder && !this.app.vault.getAbstractFileByPath(folder)) {
-                        await this.app.vault.createFolder(folder);
-                }
-                await this.app.vault.create(path, data);
-        }
-
-        /** Apply the built-in Daily Note template variables to the given template string. */
-        renderDailyTemplate(tpl: string, date: string): string {
-                const m = moment(date, this.getDateFormat());
-                const fmt = this.getDateFormat();
-                return tpl
-                        .replace(/{{\s*date\s*}}/gi, m.format(fmt))
-                        .replace(/{{\s*time\s*}}/gi, moment().format("HH:mm"))
-                        .replace(/{{\s*title\s*}}/gi, m.format(fmt))
-                        .replace(/{{\s*date:(.+?)}}/gi, (_, f) => m.format(f.trim()));
-        }
-
         convertText(text: string): string {
                 const phrases = [...this.allPhrases()].sort((a, b) => b.length - a.length);
 
@@ -1015,16 +953,6 @@ class DDSettingTab extends PluginSettingTab {
                                                 await this.plugin.saveSettings();
                                         }),
                         );
-
-                new Setting(containerEl)
-                        .setName("Create missing daily notes")
-                        .setDesc("Use the Daily Note template when a linked note doesn't exist")
-                        .addToggle(t =>
-                                t.setValue(this.plugin.settings.createMissingNotes)
-                                 .onChange(async (v:boolean) => {
-                                         this.plugin.settings.createMissingNotes = v;
-                                         await this.plugin.saveSettings();
-                                 }));
 
                 (containerEl as any).createEl("h3", { text: "Holiday groups" });
                 Object.entries(GROUP_HOLIDAYS).forEach(([g, list]) => {
