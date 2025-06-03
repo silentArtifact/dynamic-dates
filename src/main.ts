@@ -535,6 +535,33 @@ class DDSuggest extends EditorSuggest<string> {
         ): EditorSuggestTriggerInfo | null {
                 const lineBefore = editor.getLine(cursor.line).slice(0, cursor.ch);
 
+                /* ----------------------------------------------------------
+                   Skip suggestions inside code or wiki links
+                ----------------------------------------------------------- */
+                // inside fenced block?
+                let fenced = false;
+                for (let i = 0; i <= cursor.line; i++) {
+                        let line = editor.getLine(i);
+                        if (i === cursor.line) line = line.slice(0, cursor.ch);
+                        let idx = 0;
+                        while ((idx = line.indexOf("```", idx)) !== -1) {
+                                fenced = !fenced;
+                                idx += 3;
+                        }
+                }
+                if (fenced) return null;
+
+                // inside inline code?
+                if ((lineBefore.split("`").length - 1) % 2 === 1) return null;
+
+                // inside a wiki link?
+                const fullLine = editor.getLine(cursor.line);
+                const open = fullLine.lastIndexOf("[[", cursor.ch);
+                if (open !== -1) {
+                        const close = fullLine.indexOf("]]", open + 2);
+                        if (close === -1 || close >= cursor.ch) return null;
+                }
+
                 // Track word positions so we can look back multiple words
                 const words: { word: string; offset: number }[] = [];
                 lineBefore.replace(/\S+/g, (w, off) => {

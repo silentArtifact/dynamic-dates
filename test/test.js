@@ -295,11 +295,37 @@
     'already [[tomorrow]] here, but [[2024-05-09|tomorrow]] also');
 
   /* ------------------------------------------------------------------ */
-  /* onTrigger additional guard rails                                   */
+  /* onTrigger context guards                                           */
   /* ------------------------------------------------------------------ */
   const tPlugin = { settings: Object.assign({}, plugin.settings), dailyFolder:'Daily', allPhrases: () => PHRASES, getDailyFolder(){ return this.dailyFolder; }, getDailySettings(){ return { folder:this.dailyFolder, template:'tpl.md', format:'YYYY-MM-DD' }; }, getDateFormat(){ return this.getDailySettings().format; }, customCanonical(){ return null; } };
   const tApp = { vault:{}, workspace:{} };
   const tSugg = new DDSuggest(tApp, tPlugin);
+
+  // within fenced code block
+  const fenceLines = ['```', 'tom'];
+  assert.strictEqual(tSugg.onTrigger(
+    { line:1, ch:3 },
+    { getLine:(i)=>fenceLines[i] },
+    null
+  ), null);
+
+  // within inline code
+  assert.strictEqual(tSugg.onTrigger(
+    { line:0, ch:11 },
+    { getLine:()=> 'prefix `tom' },
+    null
+  ), null);
+
+  // within wikilink
+  assert.strictEqual(tSugg.onTrigger(
+    { line:0, ch:12 },
+    { getLine:()=> 'prefix [[tom' },
+    null
+  ), null);
+
+  /* ------------------------------------------------------------------ */
+  /* onTrigger additional guard rails                                   */
+  /* ------------------------------------------------------------------ */
   assert.strictEqual(tSugg.onTrigger({line:0,ch:4}, { getLine:()=> 'next' }, null), null);
   assert.ok(tSugg.onTrigger({line:0,ch:11}, { getLine:()=> 'next friday' }, null));
 
