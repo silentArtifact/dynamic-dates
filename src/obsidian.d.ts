@@ -1,5 +1,6 @@
 declare module "obsidian" {
     export const moment: (...args: any[]) => moment.Moment;
+    export function normalizePath(path: string): string;
     export namespace moment { export type Moment = any; }
 
     export interface TAbstractFile { path: string; }
