@@ -87,16 +87,19 @@
 
   const WEEKDAYS = ['sunday','monday','tuesday','wednesday','thursday','friday','saturday'];
   const BASE_WORDS = ['today','yesterday','tomorrow', ...WEEKDAYS];
-  const PHRASES = BASE_WORDS.flatMap(w => WEEKDAYS.includes(w) ? [w, `last ${w}`, `next ${w}`] : [w]);
 
   const obsidian_1 = { moment, EditorSuggest, KeyboardEvent, Plugin, PluginSettingTab, Setting };
-  const context = { moment, WEEKDAYS, MONTHS, BASE_WORDS, PHRASES, EditorSuggest, KeyboardEvent, Plugin, PluginSettingTab, Setting, obsidian_1 };
+  const context = { moment, WEEKDAYS, MONTHS, BASE_WORDS, EditorSuggest, KeyboardEvent, Plugin, PluginSettingTab, Setting, obsidian_1 };
   vm.createContext(context);
   vm.runInContext(helpersCode, context);
+  vm.runInContext('this.HOLIDAY_PHRASES = HOLIDAY_PHRASES;', context);
+  vm.runInContext('this.PHRASES = this.BASE_WORDS.flatMap(w => this.WEEKDAYS.includes(w) ? [w, "last " + w, "next " + w] : [w]).concat(this.HOLIDAY_PHRASES.flatMap(h => [h, "last " + h, "next " + h]));', context);
   vm.runInContext(funcSrc[0], context);
   vm.runInContext(settingsSrc[0], context);
   vm.runInContext('this.DDSuggest=' + classSrc[0], context);
   vm.runInContext('this.DynamicDates=' + pluginSrc[0], context);
+
+  const PHRASES = context.PHRASES;
 
   const { phraseToMoment, DDSuggest, DynamicDates } = context;
   const fmt = m => m.d.toISOString().slice(0,10);

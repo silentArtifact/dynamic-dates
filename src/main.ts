@@ -798,9 +798,10 @@ export default class DynamicDates extends Plugin {
 
         allPhrases(): string[] {
                 const holidays = HOLIDAY_PHRASES.filter(p => this.isHolidayEnabled(p));
+                const holidayVariants = holidays.flatMap(h => [h, `last ${h}`, `next ${h}`]);
                 return [
                         ...BASE_WORDS.flatMap(w => WEEKDAYS.includes(w) ? [w, `last ${w}`, `next ${w}`] : [w]),
-                        ...holidays,
+                        ...holidayVariants,
                         ...Object.keys(this.settings.customDates || {}).map(p => p.toLowerCase()),
                 ];
         }
