@@ -250,10 +250,10 @@
   const lf = new DynamicDates();
   lf.settings = Object.assign({}, plugin.settings);
   lf.getDailyFolder = () => 'Journal';
-  assert.strictEqual(lf.linkForPhrase('tomorrow'), '[[Journal/2024-05-09|tomorrow]]');
-  assert.strictEqual(lf.linkForPhrase('last may 1'), '[[Journal/2024-05-01|last May 1]]');
-  assert.strictEqual(lf.linkForPhrase('may 1, 2023'), '[[Journal/2023-05-01|May 1, 2023]]');
-  assert.strictEqual(lf.linkForPhrase('may 1st, 23'), '[[Journal/2023-05-01|May 1st, 23]]');
+  assert.strictEqual(lf.linkForPhrase('tomorrow'), '[[2024-05-09|tomorrow]]');
+  assert.strictEqual(lf.linkForPhrase('last may 1'), '[[2024-05-01|last May 1]]');
+  assert.strictEqual(lf.linkForPhrase('may 1, 2023'), '[[2023-05-01|May 1, 2023]]');
+  assert.strictEqual(lf.linkForPhrase('may 1st, 23'), '[[2023-05-01|May 1st, 23]]');
   assert.strictEqual(lf.linkForPhrase('nonsense'), null);
 
   /* ------------------------------------------------------------------ */
@@ -304,7 +304,7 @@
   ev1.preventDefault = () => { called1 = true; };
   tSugg.selectSuggestion('2024-05-09', ev1);
   assert.ok(called1);
-  assert.strictEqual(inserted2.pop(), '[[Daily/2024-05-09|tomorrow]]');
+  assert.strictEqual(inserted2.pop(), '[[2024-05-09|tomorrow]]');
 
   const ev2 = new KeyboardEvent({ key:'Enter', shiftKey:true });
   let called2 = false;
