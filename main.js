@@ -647,7 +647,7 @@ class DDSuggest extends obsidian_1.EditorSuggest {
             if (key && key !== settings.acceptKey)
                 return;
             if (ev.shiftKey && settings.noAliasWithShift) {
-                final = `[[${linkPath}]]`;
+                final = `[[${value}]]`;
             }
             if (typeof ev.preventDefault === "function") {
                 ev.preventDefault();

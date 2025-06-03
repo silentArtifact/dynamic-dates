@@ -717,9 +717,9 @@ class DDSuggest extends EditorSuggest<string> {
                 if (ev && (ev as any).key != null) {
                         const key = (ev as any).key === "Enter" ? "Enter" : (ev as any).key === "Tab" ? "Tab" : "";
                         if (key && key !== settings.acceptKey) return;
-                        if ((ev as any).shiftKey && settings.noAliasWithShift) {
-                                final = `[[${linkPath}]]`;
-                        }
+                       if ((ev as any).shiftKey && settings.noAliasWithShift) {
+                               final = `[[${value}]]`;
+                       }
                         if (typeof (ev as any).preventDefault === "function") {
                                 (ev as any).preventDefault();
                         }
