@@ -2,11 +2,14 @@ declare module "obsidian" {
     export const moment: (...args: any[]) => moment.Moment;
     export namespace moment { export type Moment = any; }
 
+    export interface TAbstractFile { path: string; }
+    export interface TFile extends TAbstractFile {}
+
     export class Vault {
-        getAbstractFileByPath(path: string): any;
+        getAbstractFileByPath(path: string): TAbstractFile | null;
         createFolder(path: string): Promise<void>;
-        create(path: string, data: string): Promise<void>;
-        read(file: any): Promise<string>;
+        create(path: string, data: string): Promise<TFile>;
+        read(file: TFile): Promise<string>;
     }
 
     export class Workspace {
@@ -27,7 +30,7 @@ declare module "obsidian" {
 
     export class Editor {
         getLine(line: number): string;
-        replaceRange(text: string, from: any, to: any): void;
+        replaceRange(text: string, from: EditorPosition, to: EditorPosition): void;
         getValue(): string;
         setValue(v: string): void;
     }
@@ -67,7 +70,6 @@ declare module "obsidian" {
         onClick(callback: (evt?: any) => any): this;
     }
 
-    export interface TFile {}
 }
 
 interface HTMLElement {
