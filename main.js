@@ -1,6 +1,7 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 const obsidian_1 = require("obsidian");
+const daily_1 = require("./daily");
 /* ------------------------------------------------------------------ */
 /* Phrase helpers                                                     */
 /* ------------------------------------------------------------------ */
@@ -783,37 +784,15 @@ class DynamicDates extends obsidian_1.Plugin {
         const path = (folder ? folder + "/" : "") + `${date}.md`;
         if (this.app.vault.getAbstractFileByPath(path))
             return;
-        // Try to delegate to the Daily Notes plugin if possible so that
-        // the user's configured template (and any integrations like the
-        // Templates core plugin) are correctly applied.
-        let createDailyNote;
-        const hasReq = typeof globalThis.require === 'function';
-        if (hasReq) {
-            try {
-                // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-var-requires
-                const mod = globalThis.require('obsidian-daily-notes-interface');
-                createDailyNote = mod?.createDailyNote;
-            }
-            catch { }
+        // Use a local implementation of createDailyNote so the user's
+        // configured template (and integrations like the Templates core
+        // plugin) are respected.
+        try {
+            await (0, daily_1.createDailyNote)(this.app, (0, obsidian_1.moment)(date, "YYYY-MM-DD"));
         }
-        if (!createDailyNote) {
-            createDailyNote = this.app.internalPlugins?.plugins?.["daily-notes"]?.instance?.createDailyNote;
-        }
-        if (createDailyNote) {
-            const m = (0, obsidian_1.moment)(date, "YYYY-MM-DD");
-            try {
-                await createDailyNote(m, this.app);
-            }
-            catch { }
-            if (!this.app.vault.getAbstractFileByPath(path)) {
-                try {
-                    await createDailyNote(this.app, m);
-                }
-                catch { }
-            }
-            if (this.app.vault.getAbstractFileByPath(path))
-                return;
-        }
+        catch { }
+        if (this.app.vault.getAbstractFileByPath(path))
+            return;
         const daily = this.getDailySettings();
         let data = "";
         if (daily?.template) {
