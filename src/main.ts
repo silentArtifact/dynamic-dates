@@ -131,7 +131,7 @@ const DEFAULT_SETTINGS: DDSettings = {
         acceptKey: "Tab",
         noAliasWithShift: false,
         customDates: {},
-        holidayGroups: Object.fromEntries(Object.keys(GROUP_HOLIDAYS).map(g => [g, true])),
+        holidayGroups: Object.fromEntries(Object.keys(GROUP_HOLIDAYS).map(g => [g, false])),
         holidayOverrides: {},
 };
 
@@ -663,7 +663,7 @@ export default class DynamicDates extends Plugin {
         async loadSettings() {
                 this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
                 if (!this.settings.customDates) this.settings.customDates = {};
-                if (!this.settings.holidayGroups) this.settings.holidayGroups = Object.fromEntries(Object.keys(GROUP_HOLIDAYS).map(g => [g, true]));
+                if (!this.settings.holidayGroups) this.settings.holidayGroups = Object.fromEntries(Object.keys(GROUP_HOLIDAYS).map(g => [g, false]));
                 if (!this.settings.holidayOverrides) this.settings.holidayOverrides = {};
                 this.refreshCustomMap();
                 this.refreshHolidayMap();
@@ -745,16 +745,20 @@ class DDSettingTab extends PluginSettingTab {
                         new Setting(containerEl)
                                 .setName(g)
                                 .addToggle(t =>
-                                        t.setValue(this.plugin.settings.holidayGroups[g] ?? true)
+                                        t.setValue(this.plugin.settings.holidayGroups[g] ?? false)
                                          .onChange(async (v:boolean) => {
                                                  this.plugin.settings.holidayGroups[g] = v;
                                                  await this.plugin.saveSettings();
                                                  this.display();
                                          }));
-                        if (this.plugin.settings.holidayGroups[g] ?? true) {
+                        if (this.plugin.settings.holidayGroups[g] ?? false) {
                                 list.forEach(h => {
+                                        const now = moment();
+                                        let m = HOLIDAYS[h].calc(now.year());
+                                        if (m.isBefore(now, "day")) m = HOLIDAYS[h].calc(now.year() + 1);
+                                        const label = h.split(/\s+/).map(w => properCase(w)).join(" ") + ` (${m.format("MMMM Do")})`;
                                         new Setting(containerEl)
-                                                .setDesc(h)
+                                                .setName(label)
                                                 .addToggle(t =>
                                                         t.setValue(this.plugin.settings.holidayOverrides[h] ?? true)
                                                          .onChange(async (v:boolean) => {
