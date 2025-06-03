@@ -87,7 +87,7 @@ const DEFAULT_SETTINGS = {
     acceptKey: "Tab",
     noAliasWithShift: false,
     customDates: {},
-    holidayGroups: Object.fromEntries(Object.keys(GROUP_HOLIDAYS).map(g => [g, true])),
+    holidayGroups: Object.fromEntries(Object.keys(GROUP_HOLIDAYS).map(g => [g, false])),
     holidayOverrides: {},
 };
 function isProperNoun(word) {
@@ -576,7 +576,7 @@ class DynamicDates extends obsidian_1.Plugin {
         if (!this.settings.customDates)
             this.settings.customDates = {};
         if (!this.settings.holidayGroups)
-            this.settings.holidayGroups = Object.fromEntries(Object.keys(GROUP_HOLIDAYS).map(g => [g, true]));
+            this.settings.holidayGroups = Object.fromEntries(Object.keys(GROUP_HOLIDAYS).map(g => [g, false]));
         if (!this.settings.holidayOverrides)
             this.settings.holidayOverrides = {};
         this.refreshCustomMap();
@@ -651,16 +651,21 @@ class DDSettingTab extends obsidian_1.PluginSettingTab {
         Object.entries(GROUP_HOLIDAYS).forEach(([g, list]) => {
             new obsidian_1.Setting(containerEl)
                 .setName(g)
-                .addToggle(t => t.setValue(this.plugin.settings.holidayGroups[g] ?? true)
+                .addToggle(t => t.setValue(this.plugin.settings.holidayGroups[g] ?? false)
                 .onChange(async (v) => {
                 this.plugin.settings.holidayGroups[g] = v;
                 await this.plugin.saveSettings();
                 this.display();
             }));
-            if (this.plugin.settings.holidayGroups[g] ?? true) {
+            if (this.plugin.settings.holidayGroups[g] ?? false) {
                 list.forEach(h => {
+                    const now = (0, obsidian_1.moment)();
+                    let m = HOLIDAYS[h].calc(now.year());
+                    if (m.isBefore(now, "day"))
+                        m = HOLIDAYS[h].calc(now.year() + 1);
+                    const label = h.split(/\s+/).map(w => properCase(w)).join(" ") + ` (${m.format("MMMM Do")})`;
                     new obsidian_1.Setting(containerEl)
-                        .setDesc(h)
+                        .setName(label)
                         .addToggle(t => t.setValue(this.plugin.settings.holidayOverrides[h] ?? true)
                         .onChange(async (v) => {
                         this.plugin.settings.holidayOverrides[h] = v;
