@@ -749,17 +749,20 @@ class DDSettingTab extends PluginSettingTab {
                                          .onChange(async (v:boolean) => {
                                                  this.plugin.settings.holidayGroups[g] = v;
                                                  await this.plugin.saveSettings();
+                                                 this.display();
                                          }));
-                        list.forEach(h => {
-                                new Setting(containerEl)
-                                        .setDesc(h)
-                                        .addToggle(t =>
-                                                t.setValue(this.plugin.settings.holidayOverrides[h] ?? true)
-                                                 .onChange(async (v:boolean) => {
-                                                         this.plugin.settings.holidayOverrides[h] = v;
-                                                         await this.plugin.saveSettings();
-                                                 }));
-                        });
+                        if (this.plugin.settings.holidayGroups[g] ?? true) {
+                                list.forEach(h => {
+                                        new Setting(containerEl)
+                                                .setDesc(h)
+                                                .addToggle(t =>
+                                                        t.setValue(this.plugin.settings.holidayOverrides[h] ?? true)
+                                                         .onChange(async (v:boolean) => {
+                                                                 this.plugin.settings.holidayOverrides[h] = v;
+                                                                 await this.plugin.saveSettings();
+                                                         }));
+                                });
+                        }
                 });
 
                 (containerEl as any).createEl("h3", { text: "Custom date mappings" });
