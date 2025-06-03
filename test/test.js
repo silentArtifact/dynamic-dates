@@ -452,14 +452,6 @@
 
   delete context.require;
 
-  context.require = () => ({ createDailyNote: async (m, app) => {
-    vlt2.create(`Daily/${m.format('YYYY-MM-DD')}.md`, 'REV');
-  }});
-  vlt2.files = {};
-  await ednPlugin.ensureDailyNote('2024-05-11');
-  assert.ok(vlt2.getAbstractFileByPath('Daily/2024-05-11.md'));
-  delete context.require;
-
   /* ------------------------------------------------------------------ */
   /* helper functions                                                   */
   /* ------------------------------------------------------------------ */

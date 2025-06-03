@@ -896,16 +896,6 @@ export default class DynamicDates extends Plugin {
                         try {
                                 await createDailyNote(this.app, m);
                         } catch {}
-                        if (!this.app.vault.getAbstractFileByPath(path)) {
-                                try {
-                                        await createDailyNote(m, this.app);
-                                } catch {}
-                        }
-                        if (!this.app.vault.getAbstractFileByPath(path)) {
-                                try {
-                                        await createDailyNote(m);
-                                } catch {}
-                        }
                         if (this.app.vault.getAbstractFileByPath(path)) return;
                 }
 

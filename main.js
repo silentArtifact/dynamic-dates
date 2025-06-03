@@ -806,18 +806,6 @@ class DynamicDates extends obsidian_1.Plugin {
                 await createDailyNote(this.app, m);
             }
             catch { }
-            if (!this.app.vault.getAbstractFileByPath(path)) {
-                try {
-                    await createDailyNote(m, this.app);
-                }
-                catch { }
-            }
-            if (!this.app.vault.getAbstractFileByPath(path)) {
-                try {
-                    await createDailyNote(m);
-                }
-                catch { }
-            }
             if (this.app.vault.getAbstractFileByPath(path))
                 return;
         }
