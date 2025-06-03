@@ -244,7 +244,6 @@ const DEFAULT_SETTINGS = {
     customDates: {},
     holidayGroups: Object.fromEntries(Object.keys(GROUP_HOLIDAYS).map(g => [g, false])),
     holidayOverrides: {},
-    createMissingNotes: false,
 };
 function isProperNoun(word) {
     const w = word.toLowerCase();
@@ -649,9 +648,6 @@ class DDSuggest extends obsidian_1.EditorSuggest {
             }
         }
         editor.replaceRange(final, start, end);
-        if (this.plugin.settings.createMissingNotes) {
-            await this.plugin.ensureDailyNote(value);
-        }
         this.close();
     }
     onKeyDown(ev) {
@@ -779,61 +775,6 @@ class DynamicDates extends obsidian_1.Plugin {
         }
         return `[[${value}|${alias}]]`;
     }
-    async ensureDailyNote(date) {
-        const folder = this.getDailyFolder();
-        const path = (folder ? folder + "/" : "") + `${date}.md`;
-        if (this.app.vault.getAbstractFileByPath(path))
-            return;
-        // Try to delegate to the Daily Notes plugin if possible so that
-        // the user's configured template (and any integrations like the
-        // Templates core plugin) are correctly applied.
-        let createDailyNote;
-        const hasReq = typeof globalThis.require === 'function';
-        if (hasReq) {
-            try {
-                // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-var-requires
-                const mod = globalThis.require('obsidian-daily-notes-interface');
-                createDailyNote = mod?.createDailyNote;
-            }
-            catch { }
-        }
-        if (!createDailyNote) {
-            createDailyNote = this.app.internalPlugins?.plugins?.["daily-notes"]?.instance?.createDailyNote;
-        }
-        if (createDailyNote) {
-            const m = (0, obsidian_1.moment)(date, this.getDateFormat());
-            try {
-                await createDailyNote(this.app, m);
-            }
-            catch { }
-            if (this.app.vault.getAbstractFileByPath(path))
-                return;
-        }
-        const daily = this.getDailySettings();
-        let data = "";
-        if (daily?.template) {
-            const tplPath = (0, obsidian_1.normalizePath)(daily.template);
-            const tpl = this.app.vault.getAbstractFileByPath(tplPath);
-            if (tpl) {
-                data = await this.app.vault.read(tpl);
-                data = this.renderDailyTemplate(data, date);
-            }
-        }
-        if (folder && !this.app.vault.getAbstractFileByPath(folder)) {
-            await this.app.vault.createFolder(folder);
-        }
-        await this.app.vault.create(path, data);
-    }
-    /** Apply the built-in Daily Note template variables to the given template string. */
-    renderDailyTemplate(tpl, date) {
-        const m = (0, obsidian_1.moment)(date, this.getDateFormat());
-        const fmt = this.getDateFormat();
-        return tpl
-            .replace(/{{\s*date\s*}}/gi, m.format(fmt))
-            .replace(/{{\s*time\s*}}/gi, (0, obsidian_1.moment)().format("HH:mm"))
-            .replace(/{{\s*title\s*}}/gi, m.format(fmt))
-            .replace(/{{\s*date:(.+?)}}/gi, (_, f) => m.format(f.trim()));
-    }
     convertText(text) {
         const phrases = [...this.allPhrases()].sort((a, b) => b.length - a.length);
         const replace = (seg) => {
@@ -910,14 +851,6 @@ class DDSettingTab extends obsidian_1.PluginSettingTab {
             .setValue(this.plugin.settings.noAliasWithShift)
             .onChange(async (v) => {
             this.plugin.settings.noAliasWithShift = v;
-            await this.plugin.saveSettings();
-        }));
-        new obsidian_1.Setting(containerEl)
-            .setName("Create missing daily notes")
-            .setDesc("Use the Daily Note template when a linked note doesn't exist")
-            .addToggle(t => t.setValue(this.plugin.settings.createMissingNotes)
-            .onChange(async (v) => {
-            this.plugin.settings.createMissingNotes = v;
             await this.plugin.saveSettings();
         }));
         containerEl.createEl("h3", { text: "Holiday groups" });

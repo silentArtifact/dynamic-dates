@@ -405,52 +405,6 @@
   hPlugin.refreshHolidayMap();
   assert.ok(hPlugin.allPhrases().includes('mlk day'));
 
-  /* ------------------------------------------------------------------ */
-  /* createMissingNotes feature                                         */
-  /* ------------------------------------------------------------------ */
-  const files = { 'Templates/tpl.md': { path:'Templates/tpl.md', data:'Date {{date}} {{time}} {{title}} {{date:YYYY}}' } };
-  const vlt = {
-    files,
-    getAbstractFileByPath(p){ return this.files[p] || null; },
-    createFolder(p){ this.files[p] = {}; },
-    read(f){ return this.files[f.path ?? f] && this.files[f.path ?? f].data || 'TPLCONTENT'; },
-    create(p,d){ this.files[p] = { path:p, data:d }; }
-  };
-  const cmPlugin = new DynamicDates();
-  cmPlugin.app = { vault: vlt, workspace:{} };
-  cmPlugin.settings = Object.assign({}, plugin.settings, { createMissingNotes: true });
-  cmPlugin.getDailySettings = () => ({ folder:'Daily', template:'Templates\\tpl.md', format:'YYYY-MM-DD' });
-  const cmSugg = new DDSuggest(cmPlugin.app, cmPlugin);
-  cmSugg.context = { editor:{ replaceRange:()=>{}, getLine:()=>'' }, start:{line:0,ch:0}, end:{line:0,ch:3}, query:'tom' };
-  await cmSugg.selectSuggestion('2024-05-09', new KeyboardEvent({ key:'Tab', shiftKey:false }));
-  assert.ok(vlt.getAbstractFileByPath('Daily/2024-05-09.md'));
-  assert.strictEqual(
-    vlt.getAbstractFileByPath('Daily/2024-05-09.md').data,
-    'Date 2024-05-09 00:00 2024-05-09 2024'
-  );
-
-  /* ------------------------------------------------------------------ */
-  /* ensureDailyNote delegates to createDailyNote when available         */
-  /* ------------------------------------------------------------------ */
-  const vlt2 = {
-    files: {},
-    getAbstractFileByPath(p){ return this.files[p] || null; },
-    createFolder(p){ this.files[p] = {}; },
-    read(){ return ''; },
-    create(p,d){ this.files[p] = { path:p, data:d }; }
-  };
-
-  context.require = () => ({ createDailyNote: async (app, m) => {
-    vlt2.create(`Daily/${m.format('YYYY-MM-DD')}.md`, 'FROM TEMPLATE');
-  }});
-
-  const ednPlugin = new DynamicDates();
-  ednPlugin.app = { vault: vlt2, workspace:{} };
-  ednPlugin.getDailySettings = () => ({ folder:'Daily', template:'', format:'YYYY-MM-DD' });
-  await ednPlugin.ensureDailyNote('2024-05-10');
-  assert.ok(vlt2.getAbstractFileByPath('Daily/2024-05-10.md'));
-
-  delete context.require;
 
   /* ------------------------------------------------------------------ */
   /* helper functions                                                   */
