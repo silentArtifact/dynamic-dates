@@ -701,9 +701,7 @@ class DDSuggest extends EditorSuggest<string> {
 		/* ----------------------------------------------------------------
 		   2. Build the wikilink with alias
 		----------------------------------------------------------------- */
-                const folder = this.plugin.getDailyFolder();
-                const linkPath = (folder ? folder + "/" : "") + value;
-                const link = `[[${linkPath}|${alias}]]`;
+                const link = `[[${value}|${alias}]]`;
 	
 		/* ----------------------------------------------------------------
 		   3. Insert, respecting the Shift-modifier behaviour
@@ -861,9 +859,7 @@ export default class DynamicDates extends Plugin {
                                 .map((w) => (isProperNoun(w) ? properCase(w) : w))
                                 .join(" ");
                 }
-                const folder = this.getDailyFolder();
-                const linkPath = (folder ? folder + "/" : "") + value;
-                return `[[${linkPath}|${alias}]]`;
+                return `[[${value}|${alias}]]`;
         }
 
         convertText(text: string): string {

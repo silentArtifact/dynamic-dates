@@ -628,9 +628,7 @@ class DDSuggest extends obsidian_1.EditorSuggest {
         /* ----------------------------------------------------------------
            2. Build the wikilink with alias
         ----------------------------------------------------------------- */
-        const folder = this.plugin.getDailyFolder();
-        const linkPath = (folder ? folder + "/" : "") + value;
-        const link = `[[${linkPath}|${alias}]]`;
+        const link = `[[${value}|${alias}]]`;
         /* ----------------------------------------------------------------
            3. Insert, respecting the Shift-modifier behaviour
         ----------------------------------------------------------------- */
@@ -772,9 +770,7 @@ class DynamicDates extends obsidian_1.Plugin {
                 .map((w) => (isProperNoun(w) ? properCase(w) : w))
                 .join(" ");
         }
-        const folder = this.getDailyFolder();
-        const linkPath = (folder ? folder + "/" : "") + value;
-        return `[[${linkPath}|${alias}]]`;
+        return `[[${value}|${alias}]]`;
     }
     convertText(text) {
         const phrases = [...this.allPhrases()].sort((a, b) => b.length - a.length);
