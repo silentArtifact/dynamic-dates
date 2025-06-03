@@ -101,7 +101,21 @@
 
   const PHRASES = context.PHRASES;
 
-  const { phraseToMoment, DDSuggest, DynamicDates } = context;
+  const {
+    phraseToMoment,
+    DDSuggest,
+    DynamicDates,
+    nthWeekdayOfMonth,
+    lastWeekdayOfMonth,
+    weekdayOnOrBefore,
+    easter,
+    isProperNoun,
+    properCase,
+    formatWordPart,
+    formatWord,
+    needsYearAlias,
+    isHolidayQualifier,
+  } = context;
   const fmt = m => m.d.toISOString().slice(0,10);
 
   /* ------------------------------------------------------------------ */
@@ -374,6 +388,33 @@
   hPlugin.settings.holidayOverrides['martin luther king jr day'] = true;
   hPlugin.refreshHolidayMap();
   assert.ok(hPlugin.allPhrases().includes('mlk day'));
+
+  /* ------------------------------------------------------------------ */
+  /* helper functions                                                   */
+  /* ------------------------------------------------------------------ */
+
+  assert.strictEqual(fmt(nthWeekdayOfMonth(2024, 0, 1, 3)), '2024-01-15');
+  assert.strictEqual(fmt(lastWeekdayOfMonth(2024, 4, 1)), '2024-05-27');
+  assert.strictEqual(fmt(weekdayOnOrBefore(2024, 4, 24, 1)), '2024-05-20');
+  assert.strictEqual(fmt(easter(2024)), '2024-03-31');
+  assert.strictEqual(fmt(easter(2025)), '2025-04-20');
+
+  assert.strictEqual(isProperNoun('monday'), true);
+  assert.strictEqual(isProperNoun('the'), false);
+  assert.strictEqual(isProperNoun('thanksgiving'), true);
+  assert.strictEqual(isProperNoun('holiday'), false);
+  assert.strictEqual(properCase('chinese-new-year'), 'Chinese-New-Year');
+
+  assert.strictEqual(formatWordPart('monday', 'Mo'), 'Monday');
+  assert.strictEqual(formatWordPart('the', 'Th'), 'th');
+  assert.strictEqual(formatWord('boxing-day', 'box'), 'Boxing-Day');
+
+  assert.strictEqual(needsYearAlias('last may 1'), true);
+  assert.strictEqual(needsYearAlias('may 1, 2024'), true);
+  assert.strictEqual(needsYearAlias('today'), false);
+
+  assert.strictEqual(isHolidayQualifier('last thanksgiving'), true);
+  assert.strictEqual(isHolidayQualifier('next random'), false);
 
   console.log('All tests passed');
 })();
