@@ -1,15 +1,16 @@
 import {
-	App,
-	Editor,
-	EditorPosition,
-	EditorSuggest,
-	EditorSuggestContext,
-	EditorSuggestTriggerInfo,
-	moment,
-	Plugin,
-	PluginSettingTab,
-	Setting,
-	TFile,
+        App,
+        Editor,
+        EditorPosition,
+        EditorSuggest,
+        EditorSuggestContext,
+        EditorSuggestTriggerInfo,
+        moment,
+        normalizePath,
+        Plugin,
+        PluginSettingTab,
+        Setting,
+        TFile,
 } from "obsidian";
 
 /* ------------------------------------------------------------------ */
@@ -791,7 +792,8 @@ export default class DynamicDates extends Plugin {
 
         getDailyFolder(): string {
                 const daily = this.getDailySettings();
-                return daily?.folder || "";
+                if (!daily?.folder) return "";
+                return normalizePath(daily.folder);
         }
 
         getDateFormat(): string {
@@ -875,7 +877,8 @@ export default class DynamicDates extends Plugin {
                 const daily = this.getDailySettings();
                 let data = "";
                 if (daily?.template) {
-                        const tpl = this.app.vault.getAbstractFileByPath(daily.template);
+                        const tplPath = normalizePath(daily.template);
+                        const tpl = this.app.vault.getAbstractFileByPath(tplPath);
                         if (tpl) {
                                 data = await this.app.vault.read(tpl as TFile);
                                 data = this.renderDailyTemplate(data, date);

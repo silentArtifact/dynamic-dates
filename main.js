@@ -702,7 +702,9 @@ class DynamicDates extends obsidian_1.Plugin {
     }
     getDailyFolder() {
         const daily = this.getDailySettings();
-        return daily?.folder || "";
+        if (!daily?.folder)
+            return "";
+        return (0, obsidian_1.normalizePath)(daily.folder);
     }
     getDateFormat() {
         const daily = this.getDailySettings();
@@ -784,7 +786,8 @@ class DynamicDates extends obsidian_1.Plugin {
         const daily = this.getDailySettings();
         let data = "";
         if (daily?.template) {
-            const tpl = this.app.vault.getAbstractFileByPath(daily.template);
+            const tplPath = (0, obsidian_1.normalizePath)(daily.template);
+            const tpl = this.app.vault.getAbstractFileByPath(tplPath);
             if (tpl) {
                 data = await this.app.vault.read(tpl);
                 data = this.renderDailyTemplate(data, date);

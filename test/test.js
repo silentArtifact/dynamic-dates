@@ -94,7 +94,15 @@
   const WEEKDAYS = ['sunday','monday','tuesday','wednesday','thursday','friday','saturday'];
   const BASE_WORDS = ['today','yesterday','tomorrow', ...WEEKDAYS];
 
-  const obsidian_1 = { moment, EditorSuggest, KeyboardEvent, Plugin, PluginSettingTab, Setting };
+  const obsidian_1 = {
+    moment,
+    EditorSuggest,
+    KeyboardEvent,
+    Plugin,
+    PluginSettingTab,
+    Setting,
+    normalizePath: p => p.replace(/\\/g, '/')
+  };
   const context = { moment, WEEKDAYS, MONTHS, BASE_WORDS, EditorSuggest, KeyboardEvent, Plugin, PluginSettingTab, Setting, obsidian_1 };
   vm.createContext(context);
   vm.runInContext('this.MONTH_ABBR = this.MONTHS.map(m => m.slice(0,3));', context);
@@ -400,7 +408,7 @@
   /* ------------------------------------------------------------------ */
   /* createMissingNotes feature                                         */
   /* ------------------------------------------------------------------ */
-  const files = { 'tpl.md': { path:'tpl.md', data:'Date {{date}} {{time}} {{title}} {{date:YYYY}}' } };
+  const files = { 'Templates/tpl.md': { path:'Templates/tpl.md', data:'Date {{date}} {{time}} {{title}} {{date:YYYY}}' } };
   const vlt = {
     files,
     getAbstractFileByPath(p){ return this.files[p] || null; },
@@ -411,7 +419,7 @@
   const cmPlugin = new DynamicDates();
   cmPlugin.app = { vault: vlt, workspace:{} };
   cmPlugin.settings = Object.assign({}, plugin.settings, { createMissingNotes: true });
-  cmPlugin.getDailySettings = () => ({ folder:'Daily', template:'tpl.md', format:'YYYY-MM-DD' });
+  cmPlugin.getDailySettings = () => ({ folder:'Daily', template:'Templates\\tpl.md', format:'YYYY-MM-DD' });
   const cmSugg = new DDSuggest(cmPlugin.app, cmPlugin);
   cmSugg.context = { editor:{ replaceRange:()=>{}, getLine:()=>'' }, start:{line:0,ch:0}, end:{line:0,ch:3}, query:'tom' };
   await cmSugg.selectSuggestion('2024-05-09', new KeyboardEvent({ key:'Tab', shiftKey:false }));
