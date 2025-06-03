@@ -430,6 +430,37 @@
   );
 
   /* ------------------------------------------------------------------ */
+  /* ensureDailyNote delegates to createDailyNote when available         */
+  /* ------------------------------------------------------------------ */
+  const vlt2 = {
+    files: {},
+    getAbstractFileByPath(p){ return this.files[p] || null; },
+    createFolder(p){ this.files[p] = {}; },
+    read(){ return ''; },
+    create(p,d){ this.files[p] = { path:p, data:d }; }
+  };
+
+  context.require = () => ({ createDailyNote: async (app, m) => {
+    vlt2.create(`Daily/${m.format('YYYY-MM-DD')}.md`, 'FROM TEMPLATE');
+  }});
+
+  const ednPlugin = new DynamicDates();
+  ednPlugin.app = { vault: vlt2, workspace:{} };
+  ednPlugin.getDailySettings = () => ({ folder:'Daily', template:'', format:'YYYY-MM-DD' });
+  await ednPlugin.ensureDailyNote('2024-05-10');
+  assert.ok(vlt2.getAbstractFileByPath('Daily/2024-05-10.md'));
+
+  delete context.require;
+
+  context.require = () => ({ createDailyNote: async (m, app) => {
+    vlt2.create(`Daily/${m.format('YYYY-MM-DD')}.md`, 'REV');
+  }});
+  vlt2.files = {};
+  await ednPlugin.ensureDailyNote('2024-05-11');
+  assert.ok(vlt2.getAbstractFileByPath('Daily/2024-05-11.md'));
+  delete context.require;
+
+  /* ------------------------------------------------------------------ */
   /* helper functions                                                   */
   /* ------------------------------------------------------------------ */
 
