@@ -655,16 +655,19 @@ class DDSettingTab extends obsidian_1.PluginSettingTab {
                 .onChange(async (v) => {
                 this.plugin.settings.holidayGroups[g] = v;
                 await this.plugin.saveSettings();
+                this.display();
             }));
-            list.forEach(h => {
-                new obsidian_1.Setting(containerEl)
-                    .setDesc(h)
-                    .addToggle(t => t.setValue(this.plugin.settings.holidayOverrides[h] ?? true)
-                    .onChange(async (v) => {
-                    this.plugin.settings.holidayOverrides[h] = v;
-                    await this.plugin.saveSettings();
-                }));
-            });
+            if (this.plugin.settings.holidayGroups[g] ?? true) {
+                list.forEach(h => {
+                    new obsidian_1.Setting(containerEl)
+                        .setDesc(h)
+                        .addToggle(t => t.setValue(this.plugin.settings.holidayOverrides[h] ?? true)
+                        .onChange(async (v) => {
+                        this.plugin.settings.holidayOverrides[h] = v;
+                        await this.plugin.saveSettings();
+                    }));
+                });
+            }
         });
         containerEl.createEl("h3", { text: "Custom date mappings" });
         new obsidian_1.Setting(containerEl)
