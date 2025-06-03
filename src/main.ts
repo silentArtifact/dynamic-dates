@@ -892,8 +892,15 @@ export default class DynamicDates extends Plugin {
                 }
                 if (createDailyNote) {
                         const m = moment(date, "YYYY-MM-DD");
-                        await createDailyNote(m, this.app);
-                        return;
+                        try {
+                                await createDailyNote(m, this.app);
+                        } catch {}
+                        if (!this.app.vault.getAbstractFileByPath(path)) {
+                                try {
+                                        await createDailyNote(this.app, m);
+                                } catch {}
+                        }
+                        if (this.app.vault.getAbstractFileByPath(path)) return;
                 }
 
                 const daily = this.getDailySettings();
