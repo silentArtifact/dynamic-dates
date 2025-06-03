@@ -874,6 +874,28 @@ export default class DynamicDates extends Plugin {
                 const folder = this.getDailyFolder();
                 const path = (folder ? folder + "/" : "") + `${date}.md`;
                 if (this.app.vault.getAbstractFileByPath(path)) return;
+
+                // Try to delegate to the Daily Notes plugin if possible so that
+                // the user's configured template (and any integrations like the
+                // Templates core plugin) are correctly applied.
+                let createDailyNote: ((d: moment.Moment, app: any) => Promise<void>) | undefined;
+                const hasReq = typeof (globalThis as any).require === 'function';
+                if (hasReq) {
+                        try {
+                                // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-var-requires
+                                const mod = (globalThis as any).require('obsidian-daily-notes-interface');
+                                createDailyNote = mod?.createDailyNote;
+                        } catch {}
+                }
+                if (!createDailyNote) {
+                        createDailyNote = (this.app as any).internalPlugins?.plugins?.["daily-notes"]?.instance?.createDailyNote;
+                }
+                if (createDailyNote) {
+                        const m = moment(date, "YYYY-MM-DD");
+                        await createDailyNote(m, this.app);
+                        return;
+                }
+
                 const daily = this.getDailySettings();
                 let data = "";
                 if (daily?.template) {
