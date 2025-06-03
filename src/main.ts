@@ -86,6 +86,64 @@ function weekdayOnOrBefore(year: number, month: number, day: number, weekday: nu
         return target.subtract(diff, "day");
 }
 
+function islamicDateInYear(gYear: number, iMonth: number, iDay: number): moment.Moment {
+        const fmt = new Intl.DateTimeFormat("en-u-ca-islamic", {
+                day: "numeric",
+                month: "numeric",
+                year: "numeric",
+        });
+        for (let m = 0; m < 12; m++) {
+                for (let d = 1; d <= 31; d++) {
+                        const date = new Date(gYear, m, d);
+                        if (date.getFullYear() !== gYear) continue;
+                        const parts = fmt.formatToParts(date);
+                        const im = parseInt(parts.find((p) => p.type === "month")?.value || "");
+                        const id = parseInt(parts.find((p) => p.type === "day")?.value || "");
+                        if (im === iMonth && id === iDay) return moment(date);
+                }
+        }
+        return (moment as any).invalid();
+}
+
+function hebrewDateInYear(gYear: number, hMonth: string, hDay: number): moment.Moment {
+        const fmt = new Intl.DateTimeFormat("en-u-ca-hebrew", {
+                day: "numeric",
+                month: "long",
+                year: "numeric",
+        });
+        const target = hMonth.toLowerCase();
+        for (let m = 0; m < 12; m++) {
+                for (let d = 1; d <= 31; d++) {
+                        const date = new Date(gYear, m, d);
+                        if (date.getFullYear() !== gYear) continue;
+                        const parts = fmt.formatToParts(date);
+                        const name = (parts.find((p) => p.type === "month")?.value || "").toLowerCase();
+                        const day = parseInt(parts.find((p) => p.type === "day")?.value || "");
+                        if (name === target && day === hDay) return moment(date);
+                }
+        }
+        return (moment as any).invalid();
+}
+
+function chineseDateInYear(gYear: number, cMonth: number, cDay: number): moment.Moment {
+        const fmt = new Intl.DateTimeFormat("en-u-ca-chinese", {
+                day: "numeric",
+                month: "numeric",
+                year: "numeric",
+        });
+        for (let m = 0; m < 12; m++) {
+                for (let d = 1; d <= 31; d++) {
+                        const date = new Date(gYear, m, d);
+                        if (date.getFullYear() !== gYear) continue;
+                        const parts = fmt.formatToParts(date);
+                        const cm = parseInt(parts.find((p) => p.type === "month")?.value || "");
+                        const cd = parseInt(parts.find((p) => p.type === "day")?.value || "");
+                        if (cm === cMonth && cd === cDay) return moment(date);
+                }
+        }
+        return (moment as any).invalid();
+}
+
 interface HolidayDef {
         group: string;
         calc: (y: number) => moment.Moment;
@@ -145,6 +203,26 @@ const HOLIDAY_DEFS: Record<string, HolidayDef> = {
         "good friday": { group: "Christian Holidays", calc: (y) => easter(y).subtract(2, "day") },
         "ash wednesday": { group: "Christian Holidays", calc: (y) => easter(y).subtract(46, "day") },
 
+        // Islamic Holidays
+        "ramadan": { group: "Islamic Holidays", calc: (y) => islamicDateInYear(y, 9, 1) },
+        "eid al-fitr": { group: "Islamic Holidays", calc: (y) => islamicDateInYear(y, 10, 1) },
+        "eid al-adha": { group: "Islamic Holidays", calc: (y) => islamicDateInYear(y, 12, 10) },
+
+        // Jewish Holidays
+        "passover": { group: "Jewish Holidays", calc: (y) => hebrewDateInYear(y, "Nisan", 15) },
+        "rosh hashanah": { group: "Jewish Holidays", calc: (y) => hebrewDateInYear(y, "Tishri", 1) },
+        "yom kippur": { group: "Jewish Holidays", calc: (y) => hebrewDateInYear(y, "Tishri", 10) },
+        "hanukkah": { group: "Jewish Holidays", calc: (y) => hebrewDateInYear(y, "Kislev", 25) },
+
+        // Chinese Holidays
+        "chinese new year": {
+                group: "Chinese Holidays",
+                calc: (y) => chineseDateInYear(y, 1, 1),
+                aliases: ["lunar new year"],
+        },
+        "dragon boat festival": { group: "Chinese Holidays", calc: (y) => chineseDateInYear(y, 5, 5) },
+        "mid-autumn festival": { group: "Chinese Holidays", calc: (y) => chineseDateInYear(y, 8, 15) },
+
         // Canadian Federal Holidays
         "canada day": { group: "Canadian Federal Holidays", calc: (y) => moment(new Date(y, 6, 1)) },
         "victoria day": { group: "Canadian Federal Holidays", calc: (y) => weekdayOnOrBefore(y, 4, 24, 1) },
@@ -173,10 +251,25 @@ for (const [canon, def] of Object.entries(HOLIDAY_DEFS)) {
 
 const HOLIDAY_PHRASES = Object.keys(HOLIDAYS);
 
+const NON_PROPER_WORDS = new Set([
+        "the",
+        "of",
+        "and",
+        "al",
+        "la",
+        "le",
+        "el",
+        "de",
+]);
+
 const HOLIDAY_WORDS = Array.from(
         new Set(
                 HOLIDAY_PHRASES.flatMap((p) =>
-                        p.split(/\s+/).map((w) => w.toLowerCase()),
+                        p
+                                .split(/\s+/)
+                                .flatMap((w) => w.split("-"))
+                                .map((w) => w.toLowerCase())
+                                .filter((w) => !NON_PROPER_WORDS.has(w)),
                 ),
         ),
 );
@@ -203,15 +296,49 @@ const DEFAULT_SETTINGS: DDSettings = {
 
 function isProperNoun(word: string): boolean {
         const w = word.toLowerCase();
-        return (
-                WEEKDAYS.includes(w) ||
-                MONTHS.includes(w) ||
-                HOLIDAY_WORDS.includes(w)
-        );
+        if (NON_PROPER_WORDS.has(w)) return false;
+        if (WEEKDAYS.includes(w) || MONTHS.includes(w) || HOLIDAY_WORDS.includes(w)) return true;
+        // check hyphenated parts
+        if (w.includes("-")) {
+                return w
+                        .split("-")
+                        .some((p) => !NON_PROPER_WORDS.has(p) && HOLIDAY_WORDS.includes(p));
+        }
+        return false;
 }
 
 function properCase(word: string): string {
-        return word.charAt(0).toUpperCase() + word.slice(1).toLowerCase();
+        return word
+                .split("-")
+                .map((p) => p.charAt(0).toUpperCase() + p.slice(1).toLowerCase())
+                .join("-");
+}
+
+function formatWordPart(word: string, typed?: string): string {
+        const lower = word.toLowerCase();
+        if (typed) {
+                if (typed.length === word.length && typed.toLowerCase() === lower) {
+                        return isProperNoun(word)
+                                ? properCase(word)
+                                : NON_PROPER_WORDS.has(lower)
+                                ? typed.toLowerCase()
+                                : typed;
+                }
+                if (word.toLowerCase().startsWith(typed.toLowerCase())) {
+                        if (isProperNoun(word)) return properCase(word);
+                        if (NON_PROPER_WORDS.has(lower)) return typed.toLowerCase();
+                        return typed + word.slice(typed.length);
+                }
+        }
+        if (isProperNoun(word)) return properCase(word);
+        if (NON_PROPER_WORDS.has(lower)) return word.toLowerCase();
+        return properCase(word);
+}
+
+function formatWord(word: string, typed?: string): string {
+        const parts = word.split("-");
+        const typedParts = typed ? typed.split("-") : [];
+        return parts.map((p, i) => formatWordPart(p, typedParts[i])).join("-");
 }
 
 function needsYearAlias(phrase: string): boolean {
@@ -500,23 +627,8 @@ class DDSuggest extends EditorSuggest<string> {
                                 alias = phraseWords
                                         .map((w, i) => {
                                                 const t = typedWords[i];
-                                                if (t) {
-                                                        // exact match preserves user casing
-                                                        if (t.length === w.length && t.toLowerCase() === w.toLowerCase()) {
-                                                                return isProperNoun(w) ? properCase(w) : t;
-                                                        }
-                                                        // typed prefix should keep typed characters
-                                                        if (w.toLowerCase().startsWith(t.toLowerCase())) {
-                                                                if (isProperNoun(w)) {
-                                                                        return properCase(w);
-                                                                }
-                                                                return t + w.slice(t.length);
-                                                        }
-                                                }
-                                                if (isProperNoun(w)) return properCase(w);
-                                                if (["last", "next"].includes(w.toLowerCase()) && t)
-                                                        return t;
-                                                return w.replace(/\b\w/g, ch => ch.toUpperCase());
+                                                if (["last", "next"].includes(w.toLowerCase()) && t) return t;
+                                                return formatWord(w, t);
                                         })
                                         .join(" ");
                         }
@@ -564,23 +676,8 @@ class DDSuggest extends EditorSuggest<string> {
                                 alias = phraseWords
                                         .map((w, i) => {
                                                 const t = typedWords[i];
-                                                if (t) {
-                                                        // exact match preserves user casing
-                                                        if (t.length === w.length && t.toLowerCase() === w.toLowerCase()) {
-                                                                return isProperNoun(w) ? properCase(w) : t;
-                                                        }
-                                                        // typed prefix should keep typed characters
-                                                        if (w.toLowerCase().startsWith(t.toLowerCase())) {
-                                                                if (isProperNoun(w)) {
-                                                                        return properCase(w);
-                                                                }
-                                                                return t + w.slice(t.length);
-                                                        }
-                                                }
-                                                if (isProperNoun(w)) return properCase(w);
-                                                if (["last", "next"].includes(w.toLowerCase()) && t)
-                                                        return t;
-                                                return w.replace(/\b\w/g, ch => ch.toUpperCase());
+                                                if (["last", "next"].includes(w.toLowerCase()) && t) return t;
+                                                return formatWord(w, t);
                                         })
                                         .join(" ");
                         }
