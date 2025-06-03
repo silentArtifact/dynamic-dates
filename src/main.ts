@@ -471,6 +471,29 @@ function phraseToMoment(phrase: string): moment.Moment | null {
                 }
         }
 
+        const beforeWd = lower.match(/^the\s+(sunday|monday|tuesday|wednesday|thursday|friday|saturday)\s+(?:before|previous)$/);
+        if (beforeWd) return phraseToMoment(`last ${beforeWd[1]}`);
+
+        const nthWd = lower.match(/^(?:the\s+)?(first|second|third|fourth|fifth|last)\s+(sunday|monday|tuesday|wednesday|thursday|friday|saturday)\s+(?:in|of)\s+(jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:tember)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)/i);
+        if (nthWd) {
+                const order = nthWd[1];
+                const wd = WEEKDAYS.indexOf(nthWd[2]);
+                const monthName = expandMonthName(nthWd[3]);
+                const monthIdx = MONTHS.indexOf(monthName.toLowerCase());
+                let target: moment.Moment;
+                if (order === "last") {
+                        target = lastWeekdayOfMonth(now.year(), monthIdx, wd);
+                } else {
+                        const map: Record<string, number> = { first:1, second:2, third:3, fourth:4, fifth:5 };
+                        target = nthWeekdayOfMonth(now.year(), monthIdx, wd, map[order]);
+                }
+                if (target.isBefore(now, "day")) {
+                        if (order === "last") target = lastWeekdayOfMonth(now.year()+1, monthIdx, wd);
+                        else target = nthWeekdayOfMonth(now.year()+1, monthIdx, wd, ({ first:1, second:2, third:3, fourth:4, fifth:5 } as any)[order]);
+                }
+                return target;
+        }
+
         const weekdays = WEEKDAYS;
 
         for (let i = 0; i < 7; i++) {

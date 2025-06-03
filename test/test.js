@@ -156,6 +156,11 @@
   assert.strictEqual(fmt(phraseToMoment('jan 1')), '2025-01-01');
   assert.strictEqual(fmt(phraseToMoment('last may 1')), '2024-05-01');
   assert.strictEqual(fmt(phraseToMoment('the 24th')), '2024-05-24');
+  assert.strictEqual(fmt(phraseToMoment('the tuesday previous')), '2024-05-07');
+  assert.strictEqual(fmt(phraseToMoment('the monday before')), '2024-05-06');
+  assert.strictEqual(fmt(phraseToMoment('first tuesday in july')), '2024-07-02');
+  assert.strictEqual(fmt(phraseToMoment('second thursday of june')), '2024-06-13');
+  assert.strictEqual(fmt(phraseToMoment('last friday of november')), '2024-11-29');
   assert.strictEqual(fmt(phraseToMoment('may 1, 2023')), '2023-05-01');
   assert.strictEqual(fmt(phraseToMoment('may 1st, 2023')), '2023-05-01');
   assert.strictEqual(fmt(phraseToMoment('may 1, 23')), '2023-05-01');
