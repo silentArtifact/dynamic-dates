@@ -738,9 +738,12 @@ class DDSuggest extends obsidian_1.EditorSuggest {
 class DynamicDates extends obsidian_1.Plugin {
     settings = DEFAULT_SETTINGS;
     customMap = {};
+    regexCache = [];
+    regexPhrases = [];
     refreshHolidayMap() {
         phraseToMoment.holidayGroups = { ...this.settings.holidayGroups };
         phraseToMoment.holidayOverrides = { ...this.settings.holidayOverrides };
+        this.refreshRegexCache();
     }
     refreshCustomMap() {
         this.customMap = {};
@@ -748,6 +751,15 @@ class DynamicDates extends obsidian_1.Plugin {
             this.customMap[key.toLowerCase()] = key;
         }
         phraseToMoment.customDates = Object.fromEntries(Object.entries(this.settings.customDates || {}).map(([k, v]) => [k.toLowerCase(), v]));
+        this.refreshRegexCache();
+    }
+    refreshRegexCache() {
+        const phrases = [...this.allPhrases()].sort((a, b) => b.length - a.length);
+        this.regexPhrases = phrases;
+        this.regexCache = phrases.map(p => {
+            const esc = p.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+            return new RegExp(`\\b${esc}\\b`, "gi");
+        });
     }
     getDailySettings() {
         const mc = this.app.metadataCache;
@@ -840,10 +852,10 @@ class DynamicDates extends obsidian_1.Plugin {
     }
     convertText(text) {
         const phrases = [...this.allPhrases()].sort((a, b) => b.length - a.length);
-        const regexes = phrases.map(p => {
-            const esc = p.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-            return new RegExp(`\\b${esc}\\b`, "gi");
-        });
+        if (this.regexPhrases.length !== phrases.length || !this.regexPhrases.every((p, i) => p === phrases[i])) {
+            this.refreshRegexCache();
+        }
+        const regexes = this.regexCache;
         const replace = (seg) => {
             for (const re of regexes) {
                 seg = seg.replace(re, (m) => this.linkForPhrase(m) ?? m);

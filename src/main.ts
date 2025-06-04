@@ -830,21 +830,34 @@ class DDSuggest extends EditorSuggest<string> {
 export default class DynamicDates extends Plugin {
         settings: DDSettings = DEFAULT_SETTINGS;
         customMap: Record<string, string> = {};
+       regexCache: RegExp[] = [];
+       regexPhrases: string[] = [];
 
-        refreshHolidayMap(): void {
-                (phraseToMoment as PhraseToMomentFunc).holidayGroups = { ...this.settings.holidayGroups };
-                (phraseToMoment as PhraseToMomentFunc).holidayOverrides = { ...this.settings.holidayOverrides };
-        }
+       refreshHolidayMap(): void {
+               (phraseToMoment as PhraseToMomentFunc).holidayGroups = { ...this.settings.holidayGroups };
+               (phraseToMoment as PhraseToMomentFunc).holidayOverrides = { ...this.settings.holidayOverrides };
+               this.refreshRegexCache();
+       }
 
-        refreshCustomMap(): void {
-                this.customMap = {};
-                for (const key of Object.keys(this.settings.customDates || {})) {
-                        this.customMap[key.toLowerCase()] = key;
-                }
-                (phraseToMoment as PhraseToMomentFunc).customDates = Object.fromEntries(
-                        Object.entries(this.settings.customDates || {}).map(([k, v]) => [k.toLowerCase(), v]),
-                );
-        }
+       refreshCustomMap(): void {
+               this.customMap = {};
+               for (const key of Object.keys(this.settings.customDates || {})) {
+                       this.customMap[key.toLowerCase()] = key;
+               }
+               (phraseToMoment as PhraseToMomentFunc).customDates = Object.fromEntries(
+                       Object.entries(this.settings.customDates || {}).map(([k, v]) => [k.toLowerCase(), v]),
+               );
+               this.refreshRegexCache();
+       }
+
+       refreshRegexCache(): void {
+               const phrases = [...this.allPhrases()].sort((a, b) => b.length - a.length);
+               this.regexPhrases = phrases;
+               this.regexCache = phrases.map(p => {
+                       const esc = p.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+                       return new RegExp(`\\b${esc}\\b`, "gi");
+               });
+       }
 
         getDailySettings(): DailyNoteSettings {
                 const mc = (this.app as any).metadataCache;
@@ -937,12 +950,12 @@ export default class DynamicDates extends Plugin {
                 return `[[${value}|${alias}]]`;
         }
 
-        convertText(text: string): string {
-                const phrases = [...this.allPhrases()].sort((a, b) => b.length - a.length);
-                const regexes = phrases.map(p => {
-                        const esc = p.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-                        return new RegExp(`\\b${esc}\\b`, "gi");
-                });
+       convertText(text: string): string {
+               const phrases = [...this.allPhrases()].sort((a, b) => b.length - a.length);
+               if (this.regexPhrases.length !== phrases.length || !this.regexPhrases.every((p, i) => p === phrases[i])) {
+                       this.refreshRegexCache();
+               }
+               const regexes = this.regexCache;
 
                 const replace = (seg: string) => {
                         for (const re of regexes) {
