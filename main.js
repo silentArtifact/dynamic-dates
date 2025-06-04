@@ -641,9 +641,10 @@ class DDSuggest extends obsidian_1.EditorSuggest {
             return this._last;
         }
         const uniq = new Set();
-        for (const p of this.plugin.allPhrases()) {
-            if (!prefixMatch(p, qLower))
-                continue;
+        const phrases = this.plugin.phrasesForPrefix
+            ? this.plugin.phrasesForPrefix(qLower)
+            : this.plugin.allPhrases().filter(p => prefixMatch(p, qLower));
+        for (const p of phrases) {
             const dt = phraseToMoment(p);
             if (dt)
                 uniq.add(dt.format(this.plugin.getDateFormat()));
@@ -741,6 +742,8 @@ class DynamicDates extends obsidian_1.Plugin {
     combinedRegex = null;
     regexPhrases = [];
     phrasesCache = [];
+    /** Index of phrases keyed by normalised prefix */
+    prefixIndex = new Map();
     constructor(app, manifest) {
         super(app, manifest);
         this.refreshPhrasesCache();
@@ -768,6 +771,22 @@ class DynamicDates extends obsidian_1.Plugin {
             ...holidayVariants,
             ...Object.keys(this.settings.customDates || {}).map(p => p.toLowerCase()),
         ];
+        this.buildPrefixIndex();
+    }
+    buildPrefixIndex() {
+        this.prefixIndex = new Map();
+        for (const phrase of this.phrasesCache) {
+            const norm = normalizePhrase(phrase);
+            for (let i = 1; i <= norm.length; i++) {
+                const key = norm.slice(0, i);
+                let arr = this.prefixIndex.get(key);
+                if (!arr) {
+                    arr = [];
+                    this.prefixIndex.set(key, arr);
+                }
+                arr.push(phrase);
+            }
+        }
     }
     refreshRegexCache() {
         const phrases = [...this.phrasesCache].sort((a, b) => b.length - a.length);
@@ -804,6 +823,10 @@ class DynamicDates extends obsidian_1.Plugin {
     }
     allPhrases() {
         return this.phrasesCache;
+    }
+    phrasesForPrefix(query) {
+        const key = normalizePhrase(query);
+        return this.prefixIndex.get(key) || [];
     }
     /** Return the canonical form for a custom phrase, if any. */
     customCanonical(lower) {

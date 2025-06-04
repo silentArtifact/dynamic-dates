@@ -731,15 +731,17 @@ class DDSuggest extends EditorSuggest<string> {
                         return this._last;
                 }
 
-                const uniq = new Set<string>();
-                for (const p of this.plugin.allPhrases()) {
-                        if (!prefixMatch(p, qLower)) continue;
-                        const dt = phraseToMoment(p);
-                        if (dt) uniq.add(dt.format(this.plugin.getDateFormat()));
-                }
-                this._last = [...uniq];
-                return this._last;
-        }
+               const uniq = new Set<string>();
+               const phrases = this.plugin.phrasesForPrefix
+                       ? this.plugin.phrasesForPrefix(qLower)
+                       : this.plugin.allPhrases().filter(p => prefixMatch(p, qLower));
+               for (const p of phrases) {
+                       const dt = phraseToMoment(p);
+                       if (dt) uniq.add(dt.format(this.plugin.getDateFormat()));
+               }
+               this._last = [...uniq];
+               return this._last;
+       }
 
         /** Render a single entry in the suggestion dropdown. */
         renderSuggestion(value: string, el: HTMLElement) {
@@ -839,12 +841,14 @@ class DDSuggest extends EditorSuggest<string> {
  * where daily notes are stored.
  */
 export default class DynamicDates extends Plugin {
-       settings: DDSettings = DEFAULT_SETTINGS;
-       customMap: Record<string, string> = {};
-       /** Combined regex built from all phrases */
-       combinedRegex: RegExp | null = null;
-       regexPhrases: string[] = [];
-       phrasesCache: string[] = [];
+        settings: DDSettings = DEFAULT_SETTINGS;
+        customMap: Record<string, string> = {};
+        /** Combined regex built from all phrases */
+        combinedRegex: RegExp | null = null;
+        regexPhrases: string[] = [];
+        phrasesCache: string[] = [];
+        /** Index of phrases keyed by normalised prefix */
+        prefixIndex: Map<string, string[]> = new Map();
 
        constructor(app?: App, manifest?: any) {
                super(app as any, manifest as any);
@@ -870,15 +874,32 @@ export default class DynamicDates extends Plugin {
                this.refreshRegexCache();
        }
 
-       refreshPhrasesCache(): void {
-               const holidays = HOLIDAY_PHRASES.filter(p => holidayEnabled(p));
-               const holidayVariants = holidays.flatMap(h => [h, `last ${h}`, `next ${h}`]);
-               this.phrasesCache = [
-                       ...BASE_WORDS.flatMap(w => WEEKDAYS.includes(w) ? [w, `last ${w}`, `next ${w}`] : [w]),
-                       ...holidayVariants,
-                       ...Object.keys(this.settings.customDates || {}).map(p => p.toLowerCase()),
-               ];
-       }
+        refreshPhrasesCache(): void {
+                const holidays = HOLIDAY_PHRASES.filter(p => holidayEnabled(p));
+                const holidayVariants = holidays.flatMap(h => [h, `last ${h}`, `next ${h}`]);
+                this.phrasesCache = [
+                        ...BASE_WORDS.flatMap(w => WEEKDAYS.includes(w) ? [w, `last ${w}`, `next ${w}`] : [w]),
+                        ...holidayVariants,
+                        ...Object.keys(this.settings.customDates || {}).map(p => p.toLowerCase()),
+                ];
+                this.buildPrefixIndex();
+        }
+
+        private buildPrefixIndex(): void {
+                this.prefixIndex = new Map();
+                for (const phrase of this.phrasesCache) {
+                        const norm = normalizePhrase(phrase);
+                        for (let i = 1; i <= norm.length; i++) {
+                                const key = norm.slice(0, i);
+                                let arr = this.prefixIndex.get(key);
+                                if (!arr) {
+                                        arr = [];
+                                        this.prefixIndex.set(key, arr);
+                                }
+                                arr.push(phrase);
+                        }
+                }
+        }
 
        refreshRegexCache(): void {
                const phrases = [...this.phrasesCache].sort((a, b) => b.length - a.length);
@@ -916,6 +937,11 @@ export default class DynamicDates extends Plugin {
 
        allPhrases(): string[] {
                return this.phrasesCache;
+       }
+
+       phrasesForPrefix(query: string): string[] {
+               const key = normalizePhrase(query);
+               return this.prefixIndex.get(key) || [];
        }
 
         /** Return the canonical form for a custom phrase, if any. */
