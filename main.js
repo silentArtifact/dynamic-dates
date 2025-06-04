@@ -1,9 +1,7 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 const obsidian_1 = require("obsidian");
-/* ------------------------------------------------------------------ */
-/* Phrase helpers                                                     */
-/* ------------------------------------------------------------------ */
+// Phrase helpers
 const BASE_WORDS = [
     "today",
     "yesterday",
@@ -481,9 +479,7 @@ function phraseToMoment(phrase) {
 phraseToMoment.customDates = {};
 phraseToMoment.holidayGroups = {};
 phraseToMoment.holidayOverrides = {};
-/* ------------------------------------------------------------------ */
-/* Suggest box                                                        */
-/* ------------------------------------------------------------------ */
+// Suggest box
 /**
  * Suggest box that proposes dates as the user types natural
  * language expressions.  Selecting a suggestion will replace the
@@ -502,9 +498,7 @@ class DDSuggest extends obsidian_1.EditorSuggest {
      */
     onTrigger(cursor, editor, _file) {
         const lineBefore = editor.getLine(cursor.line).slice(0, cursor.ch);
-        /* ----------------------------------------------------------
-           Skip suggestions inside code or wiki links
-        ----------------------------------------------------------- */
+        // Skip suggestions inside code or wiki links
         // inside fenced block?
         let fenced = false;
         for (let i = 0; i <= cursor.line; i++) {
@@ -645,9 +639,7 @@ class DDSuggest extends obsidian_1.EditorSuggest {
     async selectSuggestion(value, ev) {
         const { editor, start, end, query } = this.context;
         const { settings } = this.plugin;
-        /* ----------------------------------------------------------------
-           1. Find the canonical phrase that maps to this calendar date
-        ----------------------------------------------------------------- */
+        // 1. Find the canonical phrase that maps to this calendar date
         const targetDate = (0, obsidian_1.moment)(value, this.plugin.getDateFormat()).format("YYYY-MM-DD");
         const candidates = this.plugin.allPhrases().filter(p => p.startsWith(query.toLowerCase()) &&
             phraseToMoment(p)?.format("YYYY-MM-DD") === targetDate);
@@ -691,13 +683,9 @@ class DDSuggest extends obsidian_1.EditorSuggest {
                 alias = (0, obsidian_1.moment)(targetDate, "YYYY-MM-DD").format(fmt);
             }
         }
-        /* ----------------------------------------------------------------
-           2. Build the wikilink with alias
-        ----------------------------------------------------------------- */
+        // 2. Build the wikilink with alias
         const link = `[[${value}|${alias}]]`;
-        /* ----------------------------------------------------------------
-           3. Insert, respecting the Shift-modifier behaviour
-        ----------------------------------------------------------------- */
+        // 3. Insert, respecting the Shift-modifier behaviour
         let final = link;
         if (ev instanceof KeyboardEvent) {
             const key = ev.key === "Enter" ? "Enter" : ev.key === "Tab" ? "Tab" : "";
@@ -728,9 +716,7 @@ class DDSuggest extends obsidian_1.EditorSuggest {
         return false;
     }
 }
-/* ------------------------------------------------------------------ */
-/* Main plugin & settings                                             */
-/* ------------------------------------------------------------------ */
+// Main plugin & settings
 /**
  * Main plugin class.  Registers the suggestion box and exposes a
  * settings tab so users can customise how dates are formatted and
@@ -841,10 +827,12 @@ class DynamicDates extends obsidian_1.Plugin {
     }
     convertText(text) {
         const phrases = [...this.allPhrases()].sort((a, b) => b.length - a.length);
+        const regexes = phrases.map(p => {
+            const esc = p.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+            return new RegExp(`\\b${esc}\\b`, "gi");
+        });
         const replace = (seg) => {
-            for (const p of phrases) {
-                const esc = p.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-                const re = new RegExp(`\\b${esc}\\b`, "gi");
+            for (const re of regexes) {
                 seg = seg.replace(re, (m) => this.linkForPhrase(m) ?? m);
             }
             return seg;
@@ -984,9 +972,5 @@ class DDSettingTab extends obsidian_1.PluginSettingTab {
                 this.display();
             }));
         });
-        // A legacy JSON input for custom dates existed here in early
-        // versions of the plugin. It has been removed to simplify the
-        // settings UI while retaining support for custom phrases via
-        // the individual mapping fields above.
     }
 }
