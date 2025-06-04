@@ -721,14 +721,9 @@ class DDSuggest extends EditorSuggest<string> {
                                 candidates.push(phrase);
                         }
                 }
-                if (candidates.length) {
-                        phrase = candidates.sort((a, b) => a.length - b.length)[0];
-                }
-
-
-                if (candidates.length) {
-                        phrase = candidates.sort((a, b) => a.length - b.length)[0];
-                }
+               if (candidates.length) {
+                       phrase = candidates.sort((a, b) => a.length - b.length)[0];
+               }
 
                 const alias = this.plugin.buildAlias(phrase, query);
                 const niceDate = moment(target, "YYYY-MM-DD").format("MMMM Do, YYYY");
