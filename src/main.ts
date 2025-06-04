@@ -14,9 +14,7 @@ import {
         TFile,
 } from "obsidian";
 
-/* ------------------------------------------------------------------ */
-/* Settings                                                           */
-/* ------------------------------------------------------------------ */
+// Settings
 
 interface DDSettings {
         /** @deprecated Date format is now taken from the daily notes plugin */
@@ -28,9 +26,7 @@ interface DDSettings {
         holidayOverrides: Record<string, boolean>;
 }
 
-/* ------------------------------------------------------------------ */
-/* Phrase helpers                                                     */
-/* ------------------------------------------------------------------ */
+// Phrase helpers
 
 const BASE_WORDS = [
         "today",
@@ -552,9 +548,7 @@ function phraseToMoment(phrase: string): moment.Moment | null {
 (phraseToMoment as PhraseToMomentFunc).holidayGroups = {};
 (phraseToMoment as PhraseToMomentFunc).holidayOverrides = {};
 
-/* ------------------------------------------------------------------ */
-/* Suggest box                                                        */
-/* ------------------------------------------------------------------ */
+// Suggest box
 
 /**
  * Suggest box that proposes dates as the user types natural
@@ -580,9 +574,7 @@ class DDSuggest extends EditorSuggest<string> {
         ): EditorSuggestTriggerInfo | null {
                 const lineBefore = editor.getLine(cursor.line).slice(0, cursor.ch);
 
-                /* ----------------------------------------------------------
-                   Skip suggestions inside code or wiki links
-                ----------------------------------------------------------- */
+                // Skip suggestions inside code or wiki links
                 // inside fenced block?
                 let fenced = false;
                 for (let i = 0; i <= cursor.line; i++) {
@@ -731,10 +723,7 @@ class DDSuggest extends EditorSuggest<string> {
         async selectSuggestion(value: string, ev: KeyboardEvent | MouseEvent) {
                 const { editor, start, end, query } = this.context!;
                 const { settings } = this.plugin;
-	
-		/* ----------------------------------------------------------------
-		   1. Find the canonical phrase that maps to this calendar date
-		----------------------------------------------------------------- */
+                // 1. Find the canonical phrase that maps to this calendar date
                 const targetDate = moment(value, this.plugin.getDateFormat()).format("YYYY-MM-DD");
 
                 const candidates = this.plugin.allPhrases().filter(p =>
@@ -779,14 +768,9 @@ class DDSuggest extends EditorSuggest<string> {
                                 alias = moment(targetDate, "YYYY-MM-DD").format(fmt);
                         }
                 }
-		/* ----------------------------------------------------------------
-		   2. Build the wikilink with alias
-		----------------------------------------------------------------- */
+                // 2. Build the wikilink with alias
                 const link = `[[${value}|${alias}]]`;
-	
-		/* ----------------------------------------------------------------
-		   3. Insert, respecting the Shift-modifier behaviour
-		----------------------------------------------------------------- */
+                // 3. Insert, respecting the Shift-modifier behaviour
                 let final = link;
                 if (ev instanceof KeyboardEvent) {
                         const key = ev.key === "Enter" ? "Enter" : ev.key === "Tab" ? "Tab" : "";
@@ -821,9 +805,7 @@ class DDSuggest extends EditorSuggest<string> {
 
 }
 
-/* ------------------------------------------------------------------ */
-/* Main plugin & settings                                             */
-/* ------------------------------------------------------------------ */
+// Main plugin & settings
 
 /**
  * Main plugin class.  Registers the suggestion box and exposes a
@@ -942,11 +924,13 @@ export default class DynamicDates extends Plugin {
 
         convertText(text: string): string {
                 const phrases = [...this.allPhrases()].sort((a, b) => b.length - a.length);
+                const regexes = phrases.map(p => {
+                        const esc = p.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+                        return new RegExp(`\\b${esc}\\b`, "gi");
+                });
 
                 const replace = (seg: string) => {
-                        for (const p of phrases) {
-                                const esc = p.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-                                const re = new RegExp(`\\b${esc}\\b`, "gi");
+                        for (const re of regexes) {
                                 seg = seg.replace(re, (m) => this.linkForPhrase(m) ?? m);
                         }
                         return seg;
@@ -1104,11 +1088,6 @@ class DDSettingTab extends PluginSettingTab {
                                          }));
                 });
 
-
-                // A legacy JSON input for custom dates existed here in early
-                // versions of the plugin. It has been removed to simplify the
-                // settings UI while retaining support for custom phrases via
-                // the individual mapping fields above.
 
         }
 }
