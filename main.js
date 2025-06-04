@@ -318,6 +318,12 @@ function isHolidayQualifier(lower) {
         return false;
     return m[2] in HOLIDAYS;
 }
+function normalizePhrase(text) {
+    return text.toLowerCase().replace(/[\s-]+/g, "");
+}
+function prefixMatch(candidate, query) {
+    return normalizePhrase(candidate).startsWith(normalizePhrase(query));
+}
 function formatTypedPhrase(phrase) {
     return phrase
         .split(/\s+/)
@@ -561,7 +567,7 @@ class DDSuggest extends obsidian_1.EditorSuggest {
             if (!hasQualifier && query.length < 3)
                 continue;
             // must map to a known phrase or a recognised month/day
-            if (!all.some((p) => p.startsWith(query)) && !phraseToMoment(query))
+            if (!all.some((p) => prefixMatch(p, query)) && !phraseToMoment(query))
                 continue;
             return {
                 start: { line: cursor.line, ch: startCh },
@@ -585,7 +591,7 @@ class DDSuggest extends obsidian_1.EditorSuggest {
         }
         const uniq = new Set();
         for (const p of this.plugin.allPhrases()) {
-            if (!p.startsWith(qLower))
+            if (!prefixMatch(p, qLower))
                 continue;
             const dt = phraseToMoment(p);
             if (dt)
@@ -601,7 +607,7 @@ class DDSuggest extends obsidian_1.EditorSuggest {
         const target = (0, obsidian_1.moment)(value, this.plugin.getDateFormat()).format("YYYY-MM-DD");
         const candidates = this.plugin
             .allPhrases()
-            .filter((p) => p.startsWith(phrase) &&
+            .filter((p) => prefixMatch(p, phrase) &&
             phraseToMoment(p)?.format("YYYY-MM-DD") === target);
         if (!candidates.length && isHolidayQualifier(phrase)) {
             const m = phraseToMoment(phrase);
@@ -628,7 +634,7 @@ class DDSuggest extends obsidian_1.EditorSuggest {
         const { settings } = this.plugin;
         // 1. Find the canonical phrase that maps to this calendar date
         const targetDate = (0, obsidian_1.moment)(value, this.plugin.getDateFormat()).format("YYYY-MM-DD");
-        const candidates = this.plugin.allPhrases().filter(p => p.startsWith(query.toLowerCase()) &&
+        const candidates = this.plugin.allPhrases().filter(p => prefixMatch(p, query.toLowerCase()) &&
             phraseToMoment(p)?.format("YYYY-MM-DD") === targetDate);
         if (!candidates.length && isHolidayQualifier(query.toLowerCase())) {
             const m = phraseToMoment(query.toLowerCase());
