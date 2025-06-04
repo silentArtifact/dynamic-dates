@@ -700,33 +700,11 @@ class DDSuggest extends EditorSuggest<string> {
                 }
 
 
-                const custom = this.plugin.customCanonical(phrase);
-                let alias: string;
+                if (candidates.length) {
+                        phrase = candidates.sort((a, b) => a.length - b.length)[0];
+                }
 
-               if (candidates.length) {
-                       phrase = candidates.sort((a, b) => a.length - b.length)[0];
-                       const canonical = this.plugin.customCanonical(phrase);
-                       if (canonical) {
-                               alias = canonical;
-                       } else {
-                               const typedWords = query.split(/\s+/);
-                               const phraseWords = phrase.split(/\s+/);
-                               alias = phraseWords
-                                       .map((w, i) => {
-                                               const t = typedWords[i];
-                                               if (["last", "next"].includes(w.toLowerCase()) && t) return t;
-                                               return formatWord(w, t);
-                                       })
-                                       .join(" ");
-                       }
-               } else {
-                        if (phraseToMoment(query.toLowerCase()) && !needsYearAlias(query)) {
-                                alias = formatTypedPhrase(query);
-                        } else {
-                                const fmt = needsYearAlias(query) ? "MMMM Do, YYYY" : "MMMM Do";
-                                alias = moment(target, "YYYY-MM-DD").format(fmt);
-                        }
-               }
+                const alias = this.plugin.buildAlias(phrase, query);
                 const niceDate = moment(target, "YYYY-MM-DD").format("MMMM Do, YYYY");
                 el.createDiv({ text: `${niceDate} (${alias})` });
         }
@@ -754,35 +732,10 @@ class DDSuggest extends EditorSuggest<string> {
 
 	
                 let phrase = query.toLowerCase();
-                let alias: string;
-                const custom = this.plugin.customCanonical(phrase);
-
-                if (custom) {
-                        alias = custom;
-                } else if (candidates.length) {
+                if (candidates.length) {
                         phrase = candidates.sort((a, b) => a.length - b.length)[0];
-                        const canonical = this.plugin.customCanonical(phrase);
-                        if (canonical) {
-                                alias = canonical;
-                        } else {
-                                const typedWords = query.split(/\s+/);
-                                const phraseWords = phrase.split(/\s+/);
-                                alias = phraseWords
-                                        .map((w, i) => {
-                                                const t = typedWords[i];
-                                                if (["last", "next"].includes(w.toLowerCase()) && t) return t;
-                                                return formatWord(w, t);
-                                        })
-                                        .join(" ");
-                        }
-                } else {
-                        if (phraseToMoment(query.toLowerCase()) && !needsYearAlias(query)) {
-                                alias = formatTypedPhrase(query);
-                        } else {
-                                const fmt = needsYearAlias(query) ? "MMMM Do, YYYY" : "MMMM Do";
-                                alias = moment(targetDate, "YYYY-MM-DD").format(fmt);
-                        }
                 }
+                const alias = this.plugin.buildAlias(phrase, query);
                 // 2. Build the wikilink with alias
                 const link = `[[${value}|${alias}]]`;
                 // 3. Insert, respecting the Shift-modifier behaviour
@@ -896,6 +849,47 @@ export default class DynamicDates extends Plugin {
                 return this.customMap[lower.toLowerCase()] || null;
         }
 
+        /**
+         * Generate the alias text for a wikilink. The `phrase` parameter
+         * should be the canonical phrase that maps to the target date and
+         * `typed` is the raw text typed by the user.  Pass an empty string
+         * for `typed` when no user input should influence casing.
+         */
+        buildAlias(phrase: string, typed: string): string {
+                const canonical = this.customCanonical(phrase);
+                if (canonical) return canonical;
+
+                const target = phraseToMoment(phrase);
+                if (!target) return typed;
+
+                if (typed) {
+                        if (typed.toLowerCase() !== phrase) {
+                                const typedWords = typed.split(/\s+/);
+                                const phraseWords = phrase.split(/\s+/);
+                                return phraseWords
+                                        .map((w, i) => {
+                                                const t = typedWords[i];
+                                                if (["last", "next"].includes(w.toLowerCase()) && t) return t;
+                                                return formatWord(w, t);
+                                        })
+                                        .join(" ");
+                        }
+
+                        if (phraseToMoment(typed.toLowerCase()) && !needsYearAlias(typed)) {
+                                return formatTypedPhrase(typed);
+                        }
+
+                        if (phraseToMoment(typed.toLowerCase()) && needsYearAlias(typed)) {
+                                return target.format("MMMM Do, YYYY");
+                        }
+                }
+
+                return phrase
+                        .split(/\s+/)
+                        .map((w) => (isProperNoun(w) ? properCase(w) : w))
+                        .join(" ");
+        }
+
         async onload() {
                 await this.loadSettings();
                 const sugg = new DDSuggest(this.app, this);
@@ -937,16 +931,7 @@ export default class DynamicDates extends Plugin {
                 const m = phraseToMoment(phrase);
                 if (!m) return null;
                 const value = m.format(this.getDateFormat());
-                const custom = this.customCanonical(phrase);
-                let alias: string;
-                if (custom) {
-                        alias = custom;
-                } else {
-                        alias = phrase
-                                .split(/\s+/)
-                                .map((w) => (isProperNoun(w) ? properCase(w) : w))
-                                .join(" ");
-                }
+                const alias = this.buildAlias(phrase, "");
                 return `[[${value}|${alias}]]`;
         }
 
