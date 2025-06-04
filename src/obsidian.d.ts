@@ -19,10 +19,27 @@ declare module "obsidian" {
 
     export class App { vault: Vault; workspace: Workspace; internalPlugins: any; }
 
+    export interface EventRef {
+        el: HTMLElement | Document | Window;
+        type: string;
+        handler: (ev: Event) => any;
+        options?: AddEventListenerOptions;
+    }
+
+    export interface DailyNoteSettings {
+        folder?: string;
+        format?: string;
+    }
+
     export class Plugin {
         app: App;
         registerEditorSuggest(s: EditorSuggest<any>): void;
-        registerDomEvent(el: any, type: string, cb: (ev: any) => any, options?: any): void;
+        registerDomEvent<E extends Event>(
+            el: HTMLElement | Document | Window,
+            type: string,
+            cb: (ev: E) => any,
+            options?: AddEventListenerOptions
+        ): EventRef;
         addSettingTab(tab: PluginSettingTab): void;
         addCommand(cmd: any): void;
         loadData(): Promise<any>;
@@ -51,6 +68,7 @@ declare module "obsidian" {
     export class PluginSettingTab {
         constructor(app: App, plugin: Plugin);
         containerEl: HTMLElement;
+        display(): void;
     }
 
     export class Setting {

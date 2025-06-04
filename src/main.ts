@@ -9,6 +9,7 @@ import {
         normalizePath,
         Plugin,
         PluginSettingTab,
+        DailyNoteSettings,
         Setting,
         TFile,
 } from "obsidian";
@@ -286,9 +287,9 @@ function holidayEnabled(name: string): boolean {
         const entry = HOLIDAYS[name];
         if (!entry) return true;
         const canonical = entry.canonical;
-        const overrides: Record<string, boolean> = (phraseToMoment as any).holidayOverrides || {};
+        const overrides: Record<string, boolean> = (phraseToMoment as PhraseToMomentFunc).holidayOverrides || {};
         if (canonical in overrides) return overrides[canonical];
-        const groups: Record<string, boolean> = (phraseToMoment as any).holidayGroups || {};
+        const groups: Record<string, boolean> = (phraseToMoment as PhraseToMomentFunc).holidayGroups || {};
         const g = entry.group;
         if (g && g in groups) return groups[g];
         return true;
@@ -388,11 +389,18 @@ const PHRASES = BASE_WORDS.flatMap((w) =>
  * "december 25" or "august 20th".  Abbreviated month names are not
  * recognised.  If the phrase cannot be parsed, `null` is returned.
  */
+type PhraseToMomentFunc = {
+        (phrase: string): moment.Moment | null;
+        customDates: Record<string, string>;
+        holidayGroups: Record<string, boolean>;
+        holidayOverrides: Record<string, boolean>;
+};
+
 function phraseToMoment(phrase: string): moment.Moment | null {
         const now = moment();
         const lower = phrase.toLowerCase().trim();
 
-        const customMap: Record<string,string> = (phraseToMoment as any).customDates || {};
+        const customMap: Record<string,string> = (phraseToMoment as PhraseToMomentFunc).customDates || {};
         if (lower in customMap) {
                 const val = customMap[lower];
                 const m = moment(val, ["MM-DD","M-D","MMMM D","MMM D"], true);
@@ -540,7 +548,9 @@ function phraseToMoment(phrase: string): moment.Moment | null {
         return null;
 }
 
-(phraseToMoment as any).customDates = {};
+(phraseToMoment as PhraseToMomentFunc).customDates = {};
+(phraseToMoment as PhraseToMomentFunc).holidayGroups = {};
+(phraseToMoment as PhraseToMomentFunc).holidayOverrides = {};
 
 /* ------------------------------------------------------------------ */
 /* Suggest box                                                        */
@@ -778,18 +788,14 @@ class DDSuggest extends EditorSuggest<string> {
 		   3. Insert, respecting the Shift-modifier behaviour
 		----------------------------------------------------------------- */
                 let final = link;
-                if (ev && (ev as any).key != null) {
-                        const key = (ev as any).key === "Enter" ? "Enter" : (ev as any).key === "Tab" ? "Tab" : "";
+                if (ev instanceof KeyboardEvent) {
+                        const key = ev.key === "Enter" ? "Enter" : ev.key === "Tab" ? "Tab" : "";
                         if (key && key !== settings.acceptKey) return;
-                       if ((ev as any).shiftKey && settings.noAliasWithShift) {
+                       if (ev.shiftKey && settings.noAliasWithShift) {
                                final = `[[${value}]]`;
                        }
-                        if (typeof (ev as any).preventDefault === "function") {
-                                (ev as any).preventDefault();
-                        }
-                        if (typeof (ev as any).stopPropagation === "function") {
-                                (ev as any).stopPropagation();
-                        }
+                        if (typeof ev.preventDefault === "function") ev.preventDefault();
+                        if (typeof ev.stopPropagation === "function") ev.stopPropagation();
                 }
 
                 editor.replaceRange(
@@ -829,8 +835,8 @@ export default class DynamicDates extends Plugin {
         customMap: Record<string, string> = {};
 
         refreshHolidayMap(): void {
-                (phraseToMoment as any).holidayGroups = { ...this.settings.holidayGroups };
-                (phraseToMoment as any).holidayOverrides = { ...this.settings.holidayOverrides };
+                (phraseToMoment as PhraseToMomentFunc).holidayGroups = { ...this.settings.holidayGroups };
+                (phraseToMoment as PhraseToMomentFunc).holidayOverrides = { ...this.settings.holidayOverrides };
         }
 
         refreshCustomMap(): void {
@@ -838,12 +844,12 @@ export default class DynamicDates extends Plugin {
                 for (const key of Object.keys(this.settings.customDates || {})) {
                         this.customMap[key.toLowerCase()] = key;
                 }
-                (phraseToMoment as any).customDates = Object.fromEntries(
+                (phraseToMoment as PhraseToMomentFunc).customDates = Object.fromEntries(
                         Object.entries(this.settings.customDates || {}).map(([k, v]) => [k.toLowerCase(), v]),
                 );
         }
 
-        getDailySettings(): any {
+        getDailySettings(): DailyNoteSettings {
                 const mc = (this.app as any).metadataCache;
                 if (mc && typeof mc.getDailyNoteSettings === "function") {
                         try {
