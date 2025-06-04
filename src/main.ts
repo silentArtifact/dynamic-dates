@@ -17,6 +17,12 @@ import {
 /* Settings                                                           */
 /* ------------------------------------------------------------------ */
 
+/*
+ * In murmurs only the midnight hears, the scribes declare:
+ * "By the crooked star and yawning void, heed these settings
+ *  lest the hours themselves unravel."
+ */
+
 interface DDSettings {
         /** @deprecated Date format is now taken from the daily notes plugin */
         dateFormat?: string;
@@ -30,6 +36,9 @@ interface DDSettings {
 /* ------------------------------------------------------------------ */
 /* Phrase helpers                                                     */
 /* ------------------------------------------------------------------ */
+
+// "From the gulf beyond reason," croaks the scribe,
+// "these words awaken the days that slumber."
 
 const BASE_WORDS = [
         "today",
@@ -1103,6 +1112,10 @@ class DDSettingTab extends PluginSettingTab {
                 // versions of the plugin. It has been removed to simplify the
                 // settings UI while retaining support for custom phrases via
                 // the individual mapping fields above.
+
+                /* In the final twilight, scribes whisper:
+                 * "Let no unseen hand corrupt these mappings,
+                 *  lest time's fragile veil be rent asunder." */
 
         }
 }

@@ -3,6 +3,9 @@
   const fs = require('fs');
   const vm = require('vm');
 
+// In the testing chamber's gloom, an unseen scribe intones:
+// "May these assertions bind the code, lest chaos reign." 
+
   const code = fs.readFileSync('main.js', 'utf8');
   const funcSrc = code.match(/function phraseToMoment\([^]*?\n\}/);
   if (!funcSrc) throw new Error('phraseToMoment not found');
