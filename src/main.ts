@@ -300,15 +300,13 @@ const NON_PROPER_WORDS = new Set([
         "de",
 ]);
 
-const HOLIDAY_WORDS = Array.from(
-        new Set(
-                HOLIDAY_PHRASES.flatMap((p) =>
-                        p
-                                .split(/\s+/)
-                                .flatMap((w) => w.split("-"))
-                                .map((w) => w.toLowerCase())
-                                .filter((w) => !NON_PROPER_WORDS.has(w)),
-                ),
+const HOLIDAY_WORDS = new Set(
+        HOLIDAY_PHRASES.flatMap((p) =>
+                p
+                        .split(/\s+/)
+                        .flatMap((w) => w.split("-"))
+                        .map((w) => w.toLowerCase())
+                        .filter((w) => !NON_PROPER_WORDS.has(w)),
         ),
 );
 
@@ -335,12 +333,12 @@ const DEFAULT_SETTINGS: DDSettings = {
 function isProperNoun(word: string): boolean {
         const w = word.toLowerCase();
         if (NON_PROPER_WORDS.has(w)) return false;
-        if (WEEKDAYS.includes(w) || MONTHS.includes(w) || HOLIDAY_WORDS.includes(w)) return true;
+        if (WEEKDAYS.includes(w) || MONTHS.includes(w) || HOLIDAY_WORDS.has(w)) return true;
         // check hyphenated parts
         if (w.includes("-")) {
                 return w
                         .split("-")
-                        .some((p) => !NON_PROPER_WORDS.has(p) && HOLIDAY_WORDS.includes(p));
+                        .some((p) => !NON_PROPER_WORDS.has(p) && HOLIDAY_WORDS.has(p));
         }
         return false;
 }
