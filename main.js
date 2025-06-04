@@ -57,6 +57,22 @@ function weekdayOnOrBefore(year, month, day, weekday) {
     const diff = (target.weekday() - weekday + 7) % 7;
     return target.subtract(diff, "day");
 }
+const WEEKDAY_ALIAS = {
+    sun: "sunday",
+    mon: "monday",
+    tue: "tuesday",
+    tues: "tuesday",
+    wed: "wednesday",
+    weds: "wednesday",
+    thu: "thursday",
+    thur: "thursday",
+    thurs: "thursday",
+    fri: "friday",
+    sat: "saturday",
+};
+function normalizeWeekdayAliases(str) {
+    return str.replace(/\b(?:sun|mon|tues?|wed(?:s)?|thu(?:rs)?|thur|fri|sat)\b/g, (m) => WEEKDAY_ALIAS[m] || m);
+}
 function islamicDateInYear(gYear, iMonth, iDay) {
     const fmt = new Intl.DateTimeFormat("en-u-ca-islamic", {
         day: "numeric",
@@ -336,7 +352,7 @@ function formatTypedPhrase(phrase) {
 const PHRASES = BASE_WORDS.flatMap((w) => WEEKDAYS.includes(w) ? [w, `last ${w}`, `next ${w}`] : [w]).concat(HOLIDAY_PHRASES);
 function phraseToMoment(phrase) {
     const now = (0, obsidian_1.moment)();
-    const lower = phrase.toLowerCase().trim();
+    const lower = normalizeWeekdayAliases(phrase.toLowerCase().trim());
     const customMap = phraseToMoment.customDates || {};
     if (lower in customMap) {
         const val = customMap[lower];

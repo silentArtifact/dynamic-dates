@@ -6,8 +6,8 @@ This page describes the main scenarios the Dynamic Dates Obsidian plugin solves 
 
 1. **Automatic Date Suggestions**  
    Typing natural language phrases such as `today`, `tomorrow` or `next Monday` should trigger a suggestion for the matching calendar date. Accepting the suggestion inserts a wiki link pointing to the daily note.
-2. **Relative Date Phrases**  
-   Expressions like `last Friday`, `the Tuesday previous` or `the Monday before` are recognized and linked appropriately.
+2. **Relative Date Phrases**
+   Expressions like `last Friday`, `the Tuesday previous` or `the Monday before` are recognized and linked appropriately. Weekday names may be abbreviated (e.g. `Tue`).
 3. **Nth Weekday Parsing**  
    Phrases including `first Tuesday in July`, `second Thursday of June` or `last Friday of November` resolve to the corresponding dates.
 4. **Day-of-Month References**  
