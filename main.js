@@ -118,6 +118,7 @@ function chineseDateInYear(gYear, cMonth, cDay) {
     }
     return obsidian_1.moment.invalid();
 }
+const HOLIDAY_CACHE = {};
 function easter(y) {
     const a = y % 19;
     const b = Math.floor(y / 100);
@@ -195,6 +196,18 @@ const HOLIDAY_DEFS = {
     // UK Bank Holidays
     "boxing day": { group: "UK Bank Holidays", calc: (y) => (0, obsidian_1.moment)(new Date(y, 11, 26)) },
 };
+for (const [name, def] of Object.entries(HOLIDAY_DEFS)) {
+    const orig = def.calc;
+    def.calc = (y) => {
+        const key = `${y}:${name}`;
+        let m = HOLIDAY_CACHE[key];
+        if (!m) {
+            m = orig(y).clone();
+            HOLIDAY_CACHE[key] = m;
+        }
+        return m.clone();
+    };
+}
 const HOLIDAYS = {};
 const GROUP_HOLIDAYS = {};
 for (const [canon, def] of Object.entries(HOLIDAY_DEFS)) {

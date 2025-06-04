@@ -155,6 +155,8 @@ interface HolidayDef {
         aliases?: string[];
 }
 
+const HOLIDAY_CACHE: Record<string, moment.Moment> = {};
+
 function easter(y: number): moment.Moment {
         const a = y % 19;
         const b = Math.floor(y / 100);
@@ -240,6 +242,19 @@ const HOLIDAY_DEFS: Record<string, HolidayDef> = {
         // UK Bank Holidays
         "boxing day": { group: "UK Bank Holidays", calc: (y) => moment(new Date(y, 11, 26)) },
 };
+
+for (const [name, def] of Object.entries(HOLIDAY_DEFS)) {
+        const orig = def.calc;
+        def.calc = (y: number) => {
+                const key = `${y}:${name}`;
+                let m = HOLIDAY_CACHE[key];
+                if (!m) {
+                        m = orig(y).clone();
+                        HOLIDAY_CACHE[key] = m;
+                }
+                return m.clone();
+        };
+}
 
 interface HolidayEntry extends HolidayDef { canonical: string; }
 
