@@ -163,6 +163,7 @@
   assert.strictEqual(fmt(phraseToMoment('first tuesday in july')), '2024-07-02');
   assert.strictEqual(fmt(phraseToMoment('second thursday of june')), '2024-06-13');
   assert.strictEqual(fmt(phraseToMoment('last friday of november')), '2024-11-29');
+  assert.strictEqual(fmt(phraseToMoment('last wednesday of august 26')), '2026-08-26');
   assert.strictEqual(fmt(phraseToMoment('may 1, 2023')), '2023-05-01');
   assert.strictEqual(fmt(phraseToMoment('may 1st, 2023')), '2023-05-01');
   assert.strictEqual(fmt(phraseToMoment('may 1, 23')), '2023-05-01');

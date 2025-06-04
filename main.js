@@ -347,6 +347,9 @@ function needsYearAlias(phrase) {
     if (/^(?:last|next)\s+(jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:tember)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)\s+\d{1,2}(?:st|nd|rd|th)?$/.test(lower)) {
         return true;
     }
+    if (/^(?:the\s+)?(first|second|third|fourth|fifth|last)\s+(sunday|monday|tuesday|wednesday|thursday|friday|saturday)\s+(?:in|of)\s+(jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:tember)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)\s+\d{2,4}$/.test(lower)) {
+        return true;
+    }
     return /^(jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:tember)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)\s+\d{1,2}(?:st|nd|rd|th)?(?:,)?\s*\d{2,4}$/.test(lower);
 }
 function isHolidayQualifier(lower) {
@@ -486,21 +489,24 @@ function phraseToMoment(phrase) {
     const beforeWd = lower.match(/^the\s+(sunday|monday|tuesday|wednesday|thursday|friday|saturday)\s+(?:before|previous)$/);
     if (beforeWd)
         return phraseToMoment(`last ${beforeWd[1]}`);
-    const nthWd = lower.match(/^(?:the\s+)?(first|second|third|fourth|fifth|last)\s+(sunday|monday|tuesday|wednesday|thursday|friday|saturday)\s+(?:in|of)\s+(jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:tember)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)/i);
+    const nthWd = lower.match(/^(?:the\s+)?(first|second|third|fourth|fifth|last)\s+(sunday|monday|tuesday|wednesday|thursday|friday|saturday)\s+(?:in|of)\s+(jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:tember)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)(?:\s+(\d{2,4}))?/i);
     if (nthWd) {
         const order = nthWd[1];
         const wd = WEEKDAYS.indexOf(nthWd[2]);
         const monthName = expandMonthName(nthWd[3]);
+        const yearText = nthWd[4];
         const monthIdx = MONTHS.indexOf(monthName.toLowerCase());
         let target;
         if (order === "last") {
-            target = lastWeekdayOfMonth(now.year(), monthIdx, wd);
+            const yearNum = yearText ? (parseInt(yearText) < 100 ? parseInt(yearText) + 2000 : parseInt(yearText)) : now.year();
+            target = lastWeekdayOfMonth(yearNum, monthIdx, wd);
         }
         else {
             const map = { first: 1, second: 2, third: 3, fourth: 4, fifth: 5 };
-            target = nthWeekdayOfMonth(now.year(), monthIdx, wd, map[order]);
+            const yearNum = yearText ? (parseInt(yearText) < 100 ? parseInt(yearText) + 2000 : parseInt(yearText)) : now.year();
+            target = nthWeekdayOfMonth(yearNum, monthIdx, wd, map[order]);
         }
-        if (target.isBefore(now, "day")) {
+        if (!yearText && target.isBefore(now, "day")) {
             if (order === "last")
                 target = lastWeekdayOfMonth(now.year() + 1, monthIdx, wd);
             else
