@@ -57,6 +57,27 @@ function weekdayOnOrBefore(year, month, day, weekday) {
     const diff = (target.weekday() - weekday + 7) % 7;
     return target.subtract(diff, "day");
 }
+function dayDiff(a, b) {
+    const ma = a;
+    if (typeof ma.diff === "function")
+        return Math.abs(ma.diff(b, "day"));
+    const da = ma.d || ma.toDate();
+    const db = b.d || b.toDate();
+    return Math.abs(Math.round((da.getTime() - db.getTime()) / 86400000));
+}
+function closestDate(base, now) {
+    const opts = [base.clone(), base.clone().add(1, "year"), base.clone().subtract(1, "year")];
+    let best = opts[0];
+    let bestDiff = dayDiff(best, now);
+    for (const c of opts.slice(1)) {
+        const diff = dayDiff(c, now);
+        if (diff < bestDiff) {
+            best = c;
+            bestDiff = diff;
+        }
+    }
+    return best;
+}
 const WEEKDAY_ALIAS = {
     sun: "sunday",
     mon: "monday",
@@ -359,9 +380,7 @@ function phraseToMoment(phrase) {
         const m = (0, obsidian_1.moment)(val, ["MM-DD", "M-D", "MMMM D", "MMM D"], true);
         if (m.isValid()) {
             m.year(now.year());
-            if (m.isBefore(now, "day"))
-                m.add(1, "year");
-            return m;
+            return closestDate(m, now);
         }
     }
     for (const [name, def] of Object.entries(HOLIDAYS)) {
@@ -369,10 +388,20 @@ function phraseToMoment(phrase) {
             continue;
         const calc = def.calc;
         if (lower === name) {
-            let m = calc(now.year());
-            if (m.isBefore(now, "day"))
-                m = calc(now.year() + 1);
-            return m;
+            const base = calc(now.year());
+            const next = calc(now.year() + 1);
+            const prev = calc(now.year() - 1);
+            const opts = [base, next, prev];
+            let best = opts[0];
+            let bestDiff = dayDiff(best, now);
+            for (const c of opts.slice(1)) {
+                const diff = dayDiff(c, now);
+                if (diff < bestDiff) {
+                    best = c;
+                    bestDiff = diff;
+                }
+            }
+            return best;
         }
         if (lower === `last ${name}`) {
             let m = calc(now.year());
@@ -504,9 +533,7 @@ function phraseToMoment(phrase) {
             const target = now.clone().month(monthName).date(dayNum);
             if (!target.isValid())
                 return null;
-            if (target.isBefore(now, "day"))
-                target.add(1, "year");
-            return target;
+            return closestDate(target, now);
         }
     }
     return null;
