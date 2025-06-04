@@ -650,19 +650,21 @@ class DDSuggest extends EditorSuggest<string> {
         ): EditorSuggestTriggerInfo | null {
                 const lineBefore = editor.getLine(cursor.line).slice(0, cursor.ch);
 
-                // Skip suggestions inside code or wiki links
-                // inside fenced block?
-                let fenced = false;
-                for (let i = 0; i <= cursor.line; i++) {
-                        let line = editor.getLine(i);
-                        if (i === cursor.line) line = line.slice(0, cursor.ch);
-                        let idx = 0;
-                        while ((idx = line.indexOf("```", idx)) !== -1) {
-                                fenced = !fenced;
-                                idx += 3;
-                        }
-                }
-                if (fenced) return null;
+               // Skip suggestions inside code or wiki links
+               // inside fenced block?
+               let fenced = false;
+               const WINDOW = 20;
+               const startLine = Math.max(0, cursor.line - WINDOW);
+               for (let i = startLine; i <= cursor.line; i++) {
+                       let line = editor.getLine(i);
+                       if (i === cursor.line) line = line.slice(0, cursor.ch);
+                       let idx = 0;
+                       while ((idx = line.indexOf("```", idx)) !== -1) {
+                               fenced = !fenced;
+                               idx += 3;
+                       }
+               }
+               if (fenced) return null;
 
                 // inside inline code?
                 if ((lineBefore.split("`").length - 1) % 2 === 1) return null;
