@@ -447,6 +447,17 @@
   hPlugin.refreshHolidayMap();
   assert.ok(hPlugin.allPhrases().includes('mlk day'));
 
+  // holiday prefix match via onTrigger
+  const hSuggest = new DDSuggest({ vault:{}, workspace:{} }, hPlugin);
+  const hCtx = hSuggest.onTrigger(
+    { line:0, ch:11 },
+    { getLine:()=> 'last thanks' },
+    null
+  );
+  assert.ok(hCtx && hCtx.query === 'last thanks');
+  const hList = hSuggest.getSuggestions({ query: hCtx.query });
+  assert.ok(hList.includes('2023-11-23'));
+
 
   /* ------------------------------------------------------------------ */
   /* helper functions                                                   */
