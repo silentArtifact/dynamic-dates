@@ -36,6 +36,15 @@ npm run zip
 
 Upload the generated `dynamic-dates-<version>.zip` file when creating a GitHub release.
 
+When preparing a new release, run one of the standard version commands such as:
+
+```bash
+npm version patch
+```
+
+This will bump `package.json` and automatically update `manifest.json` via the
+`version` script so that both files share the same version number.
+
 ## Continuous Integration
 
 This project uses [GitHub Actions](https://github.com/features/actions) to run
