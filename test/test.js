@@ -436,6 +436,15 @@
   );
   assert.ok(trig && trig.start.ch === 0);
 
+  const trigPart = s2.onTrigger(
+    { line:0, ch:20 },
+    { getLine:()=> 'start of the new sem' },
+    null
+  );
+  assert.ok(trigPart && trigPart.query === 'start of the new sem');
+  const listPart = s2.getSuggestions({ query: trigPart.query });
+  assert.ok(listPart.includes('2024-08-22'));
+
   const hPlugin = new DynamicDates();
   hPlugin.settings = Object.assign({}, plugin.settings, {
     holidayGroups: { 'US Federal Holidays': true },
@@ -457,6 +466,15 @@
   assert.ok(hCtx && hCtx.query === 'last thanks');
   const hList = hSuggest.getSuggestions({ query: hCtx.query });
   assert.ok(hList.includes('2023-11-23'));
+
+  const hCtx2 = hSuggest.onTrigger(
+    { line:0, ch:10 },
+    { getLine:()=> 'last thank' },
+    null
+  );
+  assert.ok(hCtx2 && hCtx2.query === 'last thank');
+  const hList2 = hSuggest.getSuggestions({ query: hCtx2.query });
+  assert.ok(hList2.includes('2023-11-23'));
 
 
   /* ------------------------------------------------------------------ */
