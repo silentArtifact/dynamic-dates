@@ -33,6 +33,8 @@ declare module "obsidian" {
 
     export class Plugin {
         app: App;
+        manifest: any;
+        constructor(app: App, manifest: any);
         registerEditorSuggest(s: EditorSuggest<any>): void;
         registerDomEvent<E extends Event>(
             el: HTMLElement | Document | Window,
