@@ -317,14 +317,6 @@ function formatTypedPhrase(phrase) {
         .join(" ");
 }
 const PHRASES = BASE_WORDS.flatMap((w) => WEEKDAYS.includes(w) ? [w, `last ${w}`, `next ${w}`] : [w]).concat(HOLIDAY_PHRASES);
-/**
- * Convert a natural-language phrase into a moment date instance.
- *
- * Supported values include "today", "tomorrow", "yesterday",
- * "next Monday", "last Friday" and long month names such as
- * "december 25" or "august 20th".  Abbreviated month names are not
- * recognised.  If the phrase cannot be parsed, `null` is returned.
- */
 function phraseToMoment(phrase) {
     const now = (0, obsidian_1.moment)();
     const lower = phrase.toLowerCase().trim();
@@ -487,6 +479,8 @@ function phraseToMoment(phrase) {
     return null;
 }
 phraseToMoment.customDates = {};
+phraseToMoment.holidayGroups = {};
+phraseToMoment.holidayOverrides = {};
 /* ------------------------------------------------------------------ */
 /* Suggest box                                                        */
 /* ------------------------------------------------------------------ */
@@ -705,19 +699,17 @@ class DDSuggest extends obsidian_1.EditorSuggest {
            3. Insert, respecting the Shift-modifier behaviour
         ----------------------------------------------------------------- */
         let final = link;
-        if (ev && ev.key != null) {
+        if (ev instanceof KeyboardEvent) {
             const key = ev.key === "Enter" ? "Enter" : ev.key === "Tab" ? "Tab" : "";
             if (key && key !== settings.acceptKey)
                 return;
             if (ev.shiftKey && settings.noAliasWithShift) {
                 final = `[[${value}]]`;
             }
-            if (typeof ev.preventDefault === "function") {
+            if (typeof ev.preventDefault === "function")
                 ev.preventDefault();
-            }
-            if (typeof ev.stopPropagation === "function") {
+            if (typeof ev.stopPropagation === "function")
                 ev.stopPropagation();
-            }
         }
         editor.replaceRange(final, start, end);
         this.close();
