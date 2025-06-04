@@ -729,7 +729,8 @@ class DDSuggest extends obsidian_1.EditorSuggest {
 class DynamicDates extends obsidian_1.Plugin {
     settings = DEFAULT_SETTINGS;
     customMap = {};
-    regexCache = [];
+    /** Combined regex built from all phrases */
+    combinedRegex = null;
     regexPhrases = [];
     phrasesCache = [];
     constructor(app, manifest) {
@@ -763,10 +764,14 @@ class DynamicDates extends obsidian_1.Plugin {
     refreshRegexCache() {
         const phrases = [...this.phrasesCache].sort((a, b) => b.length - a.length);
         this.regexPhrases = phrases;
-        this.regexCache = phrases.map(p => {
-            const esc = p.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-            return new RegExp(`\\b${esc}\\b`, "gi");
-        });
+        const escaped = phrases.map(p => p.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"));
+        if (escaped.length) {
+            const pattern = `\\b(?:${escaped.join("|")})\\b`;
+            this.combinedRegex = new RegExp(pattern, "gi");
+        }
+        else {
+            this.combinedRegex = null;
+        }
     }
     getDailySettings() {
         const mc = this.app.metadataCache;
@@ -884,12 +889,11 @@ class DynamicDates extends obsidian_1.Plugin {
         if (this.regexPhrases.length !== phrases.length || !this.regexPhrases.every((p, i) => p === phrases[i])) {
             this.refreshRegexCache();
         }
-        const regexes = this.regexCache;
+        const regex = this.combinedRegex;
         const replace = (seg) => {
-            for (const re of regexes) {
-                seg = seg.replace(re, (m) => this.linkForPhrase(m) ?? m);
-            }
-            return seg;
+            if (!regex)
+                return seg;
+            return seg.replace(regex, (m) => this.linkForPhrase(m) ?? m);
         };
         const parts = [];
         let i = 0;
