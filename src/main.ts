@@ -831,9 +831,10 @@ class DDSuggest extends EditorSuggest<string> {
  * where daily notes are stored.
  */
 export default class DynamicDates extends Plugin {
-        settings: DDSettings = DEFAULT_SETTINGS;
-        customMap: Record<string, string> = {};
-       regexCache: RegExp[] = [];
+       settings: DDSettings = DEFAULT_SETTINGS;
+       customMap: Record<string, string> = {};
+       /** Combined regex built from all phrases */
+       combinedRegex: RegExp | null = null;
        regexPhrases: string[] = [];
        phrasesCache: string[] = [];
 
@@ -874,10 +875,13 @@ export default class DynamicDates extends Plugin {
        refreshRegexCache(): void {
                const phrases = [...this.phrasesCache].sort((a, b) => b.length - a.length);
                this.regexPhrases = phrases;
-               this.regexCache = phrases.map(p => {
-                       const esc = p.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-                       return new RegExp(`\\b${esc}\\b`, "gi");
-               });
+               const escaped = phrases.map(p => p.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"));
+               if (escaped.length) {
+                       const pattern = `\\b(?:${escaped.join("|")})\\b`;
+                       this.combinedRegex = new RegExp(pattern, "gi");
+               } else {
+                       this.combinedRegex = null;
+               }
        }
 
         getDailySettings(): DailyNoteSettings {
@@ -1002,13 +1006,11 @@ export default class DynamicDates extends Plugin {
                if (this.regexPhrases.length !== phrases.length || !this.regexPhrases.every((p, i) => p === phrases[i])) {
                        this.refreshRegexCache();
                }
-               const regexes = this.regexCache;
+               const regex = this.combinedRegex;
 
                 const replace = (seg: string) => {
-                        for (const re of regexes) {
-                                seg = seg.replace(re, (m) => this.linkForPhrase(m) ?? m);
-                        }
-                        return seg;
+                        if (!regex) return seg;
+                        return seg.replace(regex, (m) => this.linkForPhrase(m) ?? m);
                 };
 
                 const parts: string[] = [];

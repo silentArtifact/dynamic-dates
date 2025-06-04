@@ -292,7 +292,7 @@
   lf.getDailyFolder = () => '';
   const multi = lf.convertText('today and Tomorrow and next Monday');
   assert.strictEqual(multi,
-    '[[2024-05-08|today]] and [[2024-05-09|Tomorrow]] and [[2024-05-13|next [[2024-05-13|Monday]]]]');
+    '[[2024-05-08|today]] and [[2024-05-09|Tomorrow]] and [[2024-05-13|next Monday]]');
   const noReplace = lf.convertText('see you tomorrowland');
   assert.strictEqual(noReplace, 'see you tomorrowland');
   const partial = lf.convertText('nottoday tomorrow');
