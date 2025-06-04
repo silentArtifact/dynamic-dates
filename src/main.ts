@@ -91,6 +91,24 @@ function weekdayOnOrBefore(year: number, month: number, day: number, weekday: nu
         return target.subtract(diff, "day");
 }
 
+const WEEKDAY_ALIAS: Record<string, string> = {
+        sun: "sunday",
+        mon: "monday",
+        tue: "tuesday",
+        tues: "tuesday",
+        wed: "wednesday",
+        weds: "wednesday",
+        thu: "thursday",
+        thur: "thursday",
+        thurs: "thursday",
+        fri: "friday",
+        sat: "saturday",
+};
+
+function normalizeWeekdayAliases(str: string): string {
+        return str.replace(/\b(?:sun|mon|tues?|wed(?:s)?|thu(?:rs)?|thur|fri|sat)\b/g, (m) => WEEKDAY_ALIAS[m] || m);
+}
+
 function islamicDateInYear(gYear: number, iMonth: number, iDay: number): moment.Moment {
         const fmt = new Intl.DateTimeFormat("en-u-ca-islamic", {
                 day: "numeric",
@@ -417,7 +435,7 @@ type PhraseToMomentFunc = {
 
 function phraseToMoment(phrase: string): moment.Moment | null {
         const now = moment();
-        const lower = phrase.toLowerCase().trim();
+        const lower = normalizeWeekdayAliases(phrase.toLowerCase().trim());
 
         const customMap: Record<string,string> = (phraseToMoment as PhraseToMomentFunc).customDates || {};
         if (lower in customMap) {
