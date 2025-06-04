@@ -411,6 +411,7 @@
   const cPlugin = new DynamicDates();
   cPlugin.settings = Object.assign({}, plugin.settings, { customDates: { 'fall start':'08-22' } });
   phraseToMoment.customDates = { 'fall start':'08-22' };
+  cPlugin.refreshCustomMap();
   const cSugg = new DDSuggest({ vault:{}, workspace:{} }, cPlugin);
   const list = cSugg.getSuggestions({ query:'fall st' });
   assert.ok(list.includes('2024-08-22'));
@@ -419,6 +420,7 @@
 
   cPlugin.settings.customDates['Big Event'] = '02-03';
   phraseToMoment.customDates = Object.fromEntries(Object.entries(cPlugin.settings.customDates).map(([k,v])=>[k.toLowerCase(),v]));
+  cPlugin.refreshCustomMap();
   const converted3 = cPlugin.convertText('the Big Event is soon');
   assert.strictEqual(converted3, 'the [[2025-02-03|Big Event]] is soon');
 
@@ -428,6 +430,7 @@
   p2.settings = Object.assign({}, plugin.settings, {
     customDates: { 'start of the new semester': '08-22' }
   });
+  p2.refreshCustomMap();
   const s2 = new DDSuggest({ vault:{}, workspace:{} }, p2);
   const trig = s2.onTrigger(
     { line:0, ch:25 },

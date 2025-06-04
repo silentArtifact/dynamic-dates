@@ -634,9 +634,6 @@ class DDSuggest extends obsidian_1.EditorSuggest {
         if (candidates.length) {
             phrase = candidates.sort((a, b) => a.length - b.length)[0];
         }
-        if (candidates.length) {
-            phrase = candidates.sort((a, b) => a.length - b.length)[0];
-        }
         const alias = this.plugin.buildAlias(phrase, query);
         const niceDate = (0, obsidian_1.moment)(target, "YYYY-MM-DD").format("MMMM Do, YYYY");
         el.createDiv({ text: `${niceDate} (${alias})` });
@@ -707,9 +704,15 @@ class DynamicDates extends obsidian_1.Plugin {
     customMap = {};
     regexCache = [];
     regexPhrases = [];
+    phrasesCache = [];
+    constructor() {
+        super();
+        this.refreshPhrasesCache();
+    }
     refreshHolidayMap() {
         phraseToMoment.holidayGroups = { ...this.settings.holidayGroups };
         phraseToMoment.holidayOverrides = { ...this.settings.holidayOverrides };
+        this.refreshPhrasesCache();
         this.refreshRegexCache();
     }
     refreshCustomMap() {
@@ -718,10 +721,20 @@ class DynamicDates extends obsidian_1.Plugin {
             this.customMap[key.toLowerCase()] = key;
         }
         phraseToMoment.customDates = Object.fromEntries(Object.entries(this.settings.customDates || {}).map(([k, v]) => [k.toLowerCase(), v]));
+        this.refreshPhrasesCache();
         this.refreshRegexCache();
     }
+    refreshPhrasesCache() {
+        const holidays = HOLIDAY_PHRASES.filter(p => holidayEnabled(p));
+        const holidayVariants = holidays.flatMap(h => [h, `last ${h}`, `next ${h}`]);
+        this.phrasesCache = [
+            ...BASE_WORDS.flatMap(w => WEEKDAYS.includes(w) ? [w, `last ${w}`, `next ${w}`] : [w]),
+            ...holidayVariants,
+            ...Object.keys(this.settings.customDates || {}).map(p => p.toLowerCase()),
+        ];
+    }
     refreshRegexCache() {
-        const phrases = [...this.allPhrases()].sort((a, b) => b.length - a.length);
+        const phrases = [...this.phrasesCache].sort((a, b) => b.length - a.length);
         this.regexPhrases = phrases;
         this.regexCache = phrases.map(p => {
             const esc = p.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -750,13 +763,7 @@ class DynamicDates extends obsidian_1.Plugin {
         return daily?.format || "YYYY-MM-DD";
     }
     allPhrases() {
-        const holidays = HOLIDAY_PHRASES.filter(p => holidayEnabled(p));
-        const holidayVariants = holidays.flatMap(h => [h, `last ${h}`, `next ${h}`]);
-        return [
-            ...BASE_WORDS.flatMap(w => WEEKDAYS.includes(w) ? [w, `last ${w}`, `next ${w}`] : [w]),
-            ...holidayVariants,
-            ...Object.keys(this.settings.customDates || {}).map(p => p.toLowerCase()),
-        ];
+        return this.phrasesCache;
     }
     /** Return the canonical form for a custom phrase, if any. */
     customCanonical(lower) {

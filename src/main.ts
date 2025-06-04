@@ -806,10 +806,17 @@ export default class DynamicDates extends Plugin {
         customMap: Record<string, string> = {};
        regexCache: RegExp[] = [];
        regexPhrases: string[] = [];
+       phrasesCache: string[] = [];
+
+       constructor() {
+               super();
+               this.refreshPhrasesCache();
+       }
 
        refreshHolidayMap(): void {
                (phraseToMoment as PhraseToMomentFunc).holidayGroups = { ...this.settings.holidayGroups };
                (phraseToMoment as PhraseToMomentFunc).holidayOverrides = { ...this.settings.holidayOverrides };
+               this.refreshPhrasesCache();
                this.refreshRegexCache();
        }
 
@@ -821,11 +828,22 @@ export default class DynamicDates extends Plugin {
                (phraseToMoment as PhraseToMomentFunc).customDates = Object.fromEntries(
                        Object.entries(this.settings.customDates || {}).map(([k, v]) => [k.toLowerCase(), v]),
                );
+               this.refreshPhrasesCache();
                this.refreshRegexCache();
        }
 
+       refreshPhrasesCache(): void {
+               const holidays = HOLIDAY_PHRASES.filter(p => holidayEnabled(p));
+               const holidayVariants = holidays.flatMap(h => [h, `last ${h}`, `next ${h}`]);
+               this.phrasesCache = [
+                       ...BASE_WORDS.flatMap(w => WEEKDAYS.includes(w) ? [w, `last ${w}`, `next ${w}`] : [w]),
+                       ...holidayVariants,
+                       ...Object.keys(this.settings.customDates || {}).map(p => p.toLowerCase()),
+               ];
+       }
+
        refreshRegexCache(): void {
-               const phrases = [...this.allPhrases()].sort((a, b) => b.length - a.length);
+               const phrases = [...this.phrasesCache].sort((a, b) => b.length - a.length);
                this.regexPhrases = phrases;
                this.regexCache = phrases.map(p => {
                        const esc = p.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -855,15 +873,9 @@ export default class DynamicDates extends Plugin {
                 return daily?.format || "YYYY-MM-DD";
         }
 
-        allPhrases(): string[] {
-                const holidays = HOLIDAY_PHRASES.filter(p => holidayEnabled(p));
-                const holidayVariants = holidays.flatMap(h => [h, `last ${h}`, `next ${h}`]);
-                return [
-                        ...BASE_WORDS.flatMap(w => WEEKDAYS.includes(w) ? [w, `last ${w}`, `next ${w}`] : [w]),
-                        ...holidayVariants,
-                        ...Object.keys(this.settings.customDates || {}).map(p => p.toLowerCase()),
-                ];
-        }
+       allPhrases(): string[] {
+               return this.phrasesCache;
+       }
 
         /** Return the canonical form for a custom phrase, if any. */
         customCanonical(lower: string): string | null {
