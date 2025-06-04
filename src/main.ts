@@ -91,6 +91,28 @@ function weekdayOnOrBefore(year: number, month: number, day: number, weekday: nu
         return target.subtract(diff, "day");
 }
 
+function dayDiff(a: moment.Moment, b: moment.Moment): number {
+       const ma: any = a as any;
+       if (typeof ma.diff === "function") return Math.abs(ma.diff(b, "day"));
+       const da: Date = ma.d || ma.toDate();
+       const db: Date = (b as any).d || (b as any).toDate();
+       return Math.abs(Math.round((da.getTime() - db.getTime()) / 86400000));
+}
+
+function closestDate(base: moment.Moment, now: moment.Moment): moment.Moment {
+       const opts = [base.clone(), base.clone().add(1, "year"), base.clone().subtract(1, "year")];
+       let best = opts[0];
+       let bestDiff = dayDiff(best, now);
+       for (const c of opts.slice(1)) {
+               const diff = dayDiff(c, now);
+               if (diff < bestDiff) {
+                       best = c;
+                       bestDiff = diff;
+               }
+       }
+       return best;
+}
+
 const WEEKDAY_ALIAS: Record<string, string> = {
         sun: "sunday",
         mon: "monday",
@@ -441,8 +463,7 @@ function phraseToMoment(phrase: string): moment.Moment | null {
                 const m = moment(val, ["MM-DD","M-D","MMMM D","MMM D"], true);
                 if (m.isValid()) {
                         m.year(now.year());
-                        if (m.isBefore(now, "day")) m.add(1, "year");
-                        return m;
+                        return closestDate(m, now);
                 }
         }
 
@@ -450,9 +471,20 @@ function phraseToMoment(phrase: string): moment.Moment | null {
                 if (!holidayEnabled(name)) continue;
                 const calc = def.calc;
                 if (lower === name) {
-                        let m = calc(now.year());
-                        if (m.isBefore(now, "day")) m = calc(now.year() + 1);
-                        return m;
+                        const base = calc(now.year());
+                        const next = calc(now.year() + 1);
+                        const prev = calc(now.year() - 1);
+                        const opts = [base, next, prev];
+                        let best = opts[0];
+                        let bestDiff = dayDiff(best, now);
+                        for (const c of opts.slice(1)) {
+                                const diff = dayDiff(c, now);
+                                if (diff < bestDiff) {
+                                        best = c;
+                                        bestDiff = diff;
+                                }
+                        }
+                        return best;
                 }
                 if (lower === `last ${name}`) {
                         let m = calc(now.year());
@@ -576,8 +608,7 @@ function phraseToMoment(phrase: string): moment.Moment | null {
                 if (!isNaN(dayNum)) {
                         const target = now.clone().month(monthName).date(dayNum);
                         if (!target.isValid()) return null;
-                        if (target.isBefore(now, "day")) target.add(1, "year");
-                        return target;
+                        return closestDate(target, now);
                 }
         }
         return null;

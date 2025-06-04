@@ -149,13 +149,13 @@
   // additional phrases
   assert.strictEqual(fmt(phraseToMoment('monday')), '2024-05-13');
   assert.strictEqual(fmt(phraseToMoment('friday')), '2024-05-10');
-  assert.strictEqual(fmt(phraseToMoment('december 25')), '2024-12-25');
-  assert.strictEqual(fmt(phraseToMoment('january 1')), '2025-01-01');
+  assert.strictEqual(fmt(phraseToMoment('december 25')), '2023-12-25');
+  assert.strictEqual(fmt(phraseToMoment('january 1')), '2024-01-01');
   assert.strictEqual(fmt(phraseToMoment('august 20th')), '2024-08-20');
   assert.strictEqual(phraseToMoment('february 30'), null);
   assert.strictEqual(fmt(phraseToMoment('in 3 days')), '2024-05-11');
   assert.strictEqual(fmt(phraseToMoment('3 days ago')), '2024-05-05');
-  assert.strictEqual(fmt(phraseToMoment('jan 1')), '2025-01-01');
+  assert.strictEqual(fmt(phraseToMoment('jan 1')), '2024-01-01');
   assert.strictEqual(fmt(phraseToMoment('last may 1')), '2024-05-01');
   assert.strictEqual(fmt(phraseToMoment('the 24th')), '2024-05-24');
   assert.strictEqual(fmt(phraseToMoment('the tuesday previous')), '2024-05-07');
@@ -169,19 +169,19 @@
   assert.strictEqual(fmt(phraseToMoment('may 1st, 23')), '2023-05-01');
   assert.strictEqual(fmt(phraseToMoment('memorial day')), '2024-05-27');
   assert.strictEqual(fmt(phraseToMoment('labor day')), '2024-09-02');
-  assert.strictEqual(fmt(phraseToMoment('thanksgiving')), '2024-11-28');
-  assert.strictEqual(fmt(phraseToMoment('mlk day')), '2025-01-20');
-  assert.strictEqual(fmt(phraseToMoment('martin luther king day')), '2025-01-20');
-  assert.strictEqual(fmt(phraseToMoment("new year's day")), '2025-01-01');
+  assert.strictEqual(fmt(phraseToMoment('thanksgiving')), '2023-11-23');
+  assert.strictEqual(fmt(phraseToMoment('mlk day')), '2024-01-15');
+  assert.strictEqual(fmt(phraseToMoment('martin luther king day')), '2024-01-15');
+  assert.strictEqual(fmt(phraseToMoment("new year's day")), '2024-01-01');
   assert.strictEqual(fmt(phraseToMoment('last christmas')), '2023-12-25');
   assert.strictEqual(fmt(phraseToMoment('christmas 24')), '2024-12-25');
   assert.strictEqual(fmt(phraseToMoment('christmas of 2025')), '2025-12-25');
-  assert.strictEqual(fmt(phraseToMoment("valentine's day")), '2025-02-14');
-  assert.strictEqual(fmt(phraseToMoment('easter')), '2025-04-20');
+  assert.strictEqual(fmt(phraseToMoment("valentine's day")), '2024-02-14');
+  assert.strictEqual(fmt(phraseToMoment('easter')), '2024-03-31');
   assert.strictEqual(fmt(phraseToMoment('victoria day')), '2024-05-20');
   assert.strictEqual(fmt(phraseToMoment('canada day')), '2024-07-01');
   assert.strictEqual(fmt(phraseToMoment('canadian thanksgiving')), '2024-10-14');
-  assert.strictEqual(fmt(phraseToMoment('boxing day')), '2024-12-26');
+  assert.strictEqual(fmt(phraseToMoment('boxing day')), '2023-12-26');
 
   // holiday toggles
   phraseToMoment.holidayGroups = { 'US Federal Holidays': false };
@@ -201,12 +201,12 @@
   phraseToMoment.holidayGroups = { 'US Cultural Holidays': false };
   assert.strictEqual(phraseToMoment("valentine's day"), null);
   phraseToMoment.holidayGroups = { 'US Cultural Holidays': true };
-  assert.strictEqual(fmt(phraseToMoment("valentine's day")), '2025-02-14');
+  assert.strictEqual(fmt(phraseToMoment("valentine's day")), '2024-02-14');
 
   phraseToMoment.holidayGroups = { 'Christian Holidays': false };
   assert.strictEqual(phraseToMoment('easter'), null);
   phraseToMoment.holidayGroups = { 'Christian Holidays': true };
-  assert.strictEqual(fmt(phraseToMoment('easter')), '2025-04-20');
+  assert.strictEqual(fmt(phraseToMoment('easter')), '2024-03-31');
 
   /* ------------------------------------------------------------------ */
   /* onTrigger guard rails                                             */
@@ -406,7 +406,7 @@
   phraseToMoment.customDates = { 'fall start': '08-22' };
   assert.strictEqual(fmt(phraseToMoment('fall start')), '2024-08-22');
   moment.now = new Date('2024-09-30');
-  assert.strictEqual(fmt(phraseToMoment('fall start')), '2025-08-22');
+  assert.strictEqual(fmt(phraseToMoment('fall start')), '2024-08-22');
   moment.now = new Date('2024-05-08');
   const cPlugin = new DynamicDates();
   cPlugin.settings = Object.assign({}, plugin.settings, { customDates: { 'fall start':'08-22' } });
@@ -422,7 +422,7 @@
   phraseToMoment.customDates = Object.fromEntries(Object.entries(cPlugin.settings.customDates).map(([k,v])=>[k.toLowerCase(),v]));
   cPlugin.refreshCustomMap();
   const converted3 = cPlugin.convertText('the Big Event is soon');
-  assert.strictEqual(converted3, 'the [[2025-02-03|Big Event]] is soon');
+  assert.strictEqual(converted3, 'the [[2024-02-03|Big Event]] is soon');
 
   // multi-word custom phrase detection via onTrigger
   phraseToMoment.customDates = { 'start of the new semester': '08-22' };
