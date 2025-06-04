@@ -705,8 +705,8 @@ class DynamicDates extends obsidian_1.Plugin {
     regexCache = [];
     regexPhrases = [];
     phrasesCache = [];
-    constructor() {
-        super();
+    constructor(app, manifest) {
+        super(app, manifest);
         this.refreshPhrasesCache();
     }
     refreshHolidayMap() {

@@ -808,8 +808,8 @@ export default class DynamicDates extends Plugin {
        regexPhrases: string[] = [];
        phrasesCache: string[] = [];
 
-       constructor() {
-               super();
+       constructor(app?: App, manifest?: any) {
+               super(app as any, manifest as any);
                this.refreshPhrasesCache();
        }
 
