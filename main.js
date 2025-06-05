@@ -752,14 +752,15 @@ class DDSuggest extends obsidian_1.EditorSuggest {
  * where daily notes are stored.
  */
 class DynamicDates extends obsidian_1.Plugin {
+    static makeNode() { return { children: new Map(), phrase: null }; }
     settings = DEFAULT_SETTINGS;
     customMap = {};
     /** Combined regex built from all phrases */
     combinedRegex = null;
     regexPhrases = [];
     phrasesCache = [];
-    /** Index of phrases keyed by normalised prefix */
-    prefixIndex = new Map();
+    /** Trie of phrases keyed by normalised prefix */
+    prefixIndex = DynamicDates.makeNode();
     /** Cache of phrase -> moment keyed by phrase+date */
     dateCache = new Map();
     constructor(app, manifest) {
@@ -792,18 +793,19 @@ class DynamicDates extends obsidian_1.Plugin {
         this.buildPrefixIndex();
     }
     buildPrefixIndex() {
-        this.prefixIndex = new Map();
+        this.prefixIndex = DynamicDates.makeNode();
         for (const phrase of this.phrasesCache) {
             const norm = normalizePhrase(phrase);
-            for (let i = 1; i <= norm.length; i++) {
-                const key = norm.slice(0, i);
-                let arr = this.prefixIndex.get(key);
-                if (!arr) {
-                    arr = [];
-                    this.prefixIndex.set(key, arr);
+            let node = this.prefixIndex;
+            for (const ch of norm) {
+                let child = node.children.get(ch);
+                if (!child) {
+                    child = DynamicDates.makeNode();
+                    node.children.set(ch, child);
                 }
-                arr.push(phrase);
+                node = child;
             }
+            node.phrase = phrase;
         }
     }
     refreshRegexCache() {
@@ -844,7 +846,23 @@ class DynamicDates extends obsidian_1.Plugin {
     }
     phrasesForPrefix(query) {
         const key = normalizePhrase(query);
-        return this.prefixIndex.get(key) || [];
+        let node = this.prefixIndex;
+        for (const ch of key) {
+            const next = node.children.get(ch);
+            if (!next)
+                return [];
+            node = next;
+        }
+        const out = [];
+        const stack = node ? [node] : [];
+        while (stack.length) {
+            const n = stack.pop();
+            if (n.phrase)
+                out.push(n.phrase);
+            for (const child of n.children.values())
+                stack.push(child);
+        }
+        return out;
     }
     /** Retrieve a moment for the phrase with caching */
     momentForPhrase(phrase) {
