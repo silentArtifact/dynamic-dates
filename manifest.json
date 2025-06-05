@@ -2,7 +2,7 @@
   "id": "dynamic-dates",
   "name": "Dynamic Dates",
   "version": "1.0.0",
-  "main": "main.js",
+  "main": "plugin.js",
   "minAppVersion": "1.5.0",
   "description": "Suggests natural-language dates and links them to your daily notes, with options for custom phrases.",
   "author": "Matthew Gromer",
