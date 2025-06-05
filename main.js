@@ -635,7 +635,9 @@ class DDSuggest extends obsidian_1.EditorSuggest {
     getSuggestions(ctx) {
         const q = ctx.query;
         const qLower = q.toLowerCase();
-        const direct = phraseToMoment(qLower);
+        const direct = this.plugin.momentForPhrase
+            ? this.plugin.momentForPhrase(qLower)
+            : phraseToMoment(qLower);
         if (direct) {
             this._last = [direct.format(this.plugin.getDateFormat())];
             return this._last;
@@ -645,7 +647,9 @@ class DDSuggest extends obsidian_1.EditorSuggest {
             ? this.plugin.phrasesForPrefix(qLower)
             : this.plugin.allPhrases().filter(p => prefixMatch(p, qLower));
         for (const p of phrases) {
-            const dt = phraseToMoment(p);
+            const dt = this.plugin.momentForPhrase
+                ? this.plugin.momentForPhrase(p)
+                : phraseToMoment(p);
             if (dt)
                 uniq.add(dt.format(this.plugin.getDateFormat()));
         }
@@ -659,10 +663,16 @@ class DDSuggest extends obsidian_1.EditorSuggest {
         const target = (0, obsidian_1.moment)(value, this.plugin.getDateFormat()).format("YYYY-MM-DD");
         const candidates = this.plugin
             .allPhrases()
-            .filter((p) => prefixMatch(p, phrase) &&
-            phraseToMoment(p)?.format("YYYY-MM-DD") === target);
+            .filter((p) => {
+            const m = this.plugin.momentForPhrase
+                ? this.plugin.momentForPhrase(p)
+                : phraseToMoment(p);
+            return prefixMatch(p, phrase) && m?.format("YYYY-MM-DD") === target;
+        });
         if (!candidates.length && isHolidayQualifier(phrase)) {
-            const m = phraseToMoment(phrase);
+            const m = this.plugin.momentForPhrase
+                ? this.plugin.momentForPhrase(phrase)
+                : phraseToMoment(phrase);
             if (m && m.format("YYYY-MM-DD") === target) {
                 candidates.push(phrase);
             }
@@ -744,6 +754,8 @@ class DynamicDates extends obsidian_1.Plugin {
     phrasesCache = [];
     /** Index of phrases keyed by normalised prefix */
     prefixIndex = new Map();
+    /** Cache of phrase -> moment keyed by phrase+date */
+    dateCache = new Map();
     constructor(app, manifest) {
         super(app, manifest);
         this.refreshPhrasesCache();
@@ -828,6 +840,19 @@ class DynamicDates extends obsidian_1.Plugin {
         const key = normalizePhrase(query);
         return this.prefixIndex.get(key) || [];
     }
+    /** Retrieve a moment for the phrase with caching */
+    momentForPhrase(phrase) {
+        const key = `${normalizePhrase(phrase)}|${(0, obsidian_1.moment)().format('YYYY-MM-DD')}`;
+        let m = this.dateCache.get(key);
+        if (!m) {
+            const calc = phraseToMoment(phrase);
+            if (!calc)
+                return null;
+            m = calc.clone();
+            this.dateCache.set(key, m);
+        }
+        return m.clone();
+    }
     /** Return the canonical form for a custom phrase, if any. */
     customCanonical(lower) {
         return this.customMap[lower.toLowerCase()] || null;
@@ -842,7 +867,9 @@ class DynamicDates extends obsidian_1.Plugin {
         const canonical = this.customCanonical(phrase);
         if (canonical)
             return canonical;
-        const target = phraseToMoment(phrase);
+        const target = this.momentForPhrase
+            ? this.momentForPhrase(phrase)
+            : phraseToMoment(phrase);
         if (!target)
             return typed;
         if (typed) {
@@ -858,10 +885,13 @@ class DynamicDates extends obsidian_1.Plugin {
                 })
                     .join(" ");
             }
-            if (phraseToMoment(typed.toLowerCase()) && !needsYearAlias(typed)) {
+            const typedMoment = this.momentForPhrase
+                ? this.momentForPhrase(typed.toLowerCase())
+                : phraseToMoment(typed.toLowerCase());
+            if (typedMoment && !needsYearAlias(typed)) {
                 return formatTypedPhrase(typed);
             }
-            if (phraseToMoment(typed.toLowerCase()) && needsYearAlias(typed)) {
+            if (typedMoment && needsYearAlias(typed)) {
                 return target.format("MMMM Do, YYYY");
             }
         }
@@ -908,7 +938,7 @@ class DynamicDates extends obsidian_1.Plugin {
         this.refreshHolidayMap();
     }
     linkForPhrase(phrase) {
-        const m = phraseToMoment(phrase);
+        const m = this.momentForPhrase(phrase);
         if (!m)
             return null;
         const value = m.format(this.getDateFormat());

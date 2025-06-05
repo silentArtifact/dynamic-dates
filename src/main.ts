@@ -725,7 +725,9 @@ class DDSuggest extends EditorSuggest<string> {
                 const q = ctx.query;
                 const qLower = q.toLowerCase();
 
-                const direct = phraseToMoment(qLower);
+                const direct = (this.plugin as any).momentForPhrase
+                        ? (this.plugin as any).momentForPhrase(qLower)
+                        : phraseToMoment(qLower);
                 if (direct) {
                         this._last = [direct.format(this.plugin.getDateFormat())];
                         return this._last;
@@ -736,7 +738,9 @@ class DDSuggest extends EditorSuggest<string> {
                        ? this.plugin.phrasesForPrefix(qLower)
                        : this.plugin.allPhrases().filter(p => prefixMatch(p, qLower));
                for (const p of phrases) {
-                       const dt = phraseToMoment(p);
+                       const dt = (this.plugin as any).momentForPhrase
+                               ? (this.plugin as any).momentForPhrase(p)
+                               : phraseToMoment(p);
                        if (dt) uniq.add(dt.format(this.plugin.getDateFormat()));
                }
                this._last = [...uniq];
@@ -750,12 +754,16 @@ class DDSuggest extends EditorSuggest<string> {
                 const target = moment(value, this.plugin.getDateFormat()).format("YYYY-MM-DD");
                 const candidates = this.plugin
                         .allPhrases()
-                        .filter((p) =>
-                                prefixMatch(p, phrase) &&
-                                phraseToMoment(p)?.format("YYYY-MM-DD") === target,
-                        );
+                        .filter((p) => {
+                                const m = (this.plugin as any).momentForPhrase
+                                        ? (this.plugin as any).momentForPhrase(p)
+                                        : phraseToMoment(p);
+                                return prefixMatch(p, phrase) && m?.format("YYYY-MM-DD") === target;
+                        });
                 if (!candidates.length && isHolidayQualifier(phrase)) {
-                        const m = phraseToMoment(phrase);
+                        const m = (this.plugin as any).momentForPhrase
+                                ? (this.plugin as any).momentForPhrase(phrase)
+                                : phraseToMoment(phrase);
                         if (m && m.format("YYYY-MM-DD") === target) {
                                 candidates.push(phrase);
                         }
@@ -849,6 +857,8 @@ export default class DynamicDates extends Plugin {
         phrasesCache: string[] = [];
         /** Index of phrases keyed by normalised prefix */
         prefixIndex: Map<string, string[]> = new Map();
+        /** Cache of phrase -> moment keyed by phrase+date */
+        dateCache: Map<string, moment.Moment> = new Map();
 
        constructor(app?: App, manifest?: any) {
                super(app as any, manifest as any);
@@ -944,6 +954,19 @@ export default class DynamicDates extends Plugin {
                return this.prefixIndex.get(key) || [];
        }
 
+       /** Retrieve a moment for the phrase with caching */
+       momentForPhrase(phrase: string): moment.Moment | null {
+               const key = `${normalizePhrase(phrase)}|${moment().format('YYYY-MM-DD')}`;
+               let m = this.dateCache.get(key);
+               if (!m) {
+                       const calc = phraseToMoment(phrase);
+                       if (!calc) return null;
+                       m = calc.clone();
+                       this.dateCache.set(key, m);
+               }
+               return m.clone();
+       }
+
         /** Return the canonical form for a custom phrase, if any. */
         customCanonical(lower: string): string | null {
                 return this.customMap[lower.toLowerCase()] || null;
@@ -959,8 +982,10 @@ export default class DynamicDates extends Plugin {
                 const canonical = this.customCanonical(phrase);
                 if (canonical) return canonical;
 
-                const target = phraseToMoment(phrase);
-                if (!target) return typed;
+               const target = (this as any).momentForPhrase
+                       ? (this as any).momentForPhrase(phrase)
+                       : phraseToMoment(phrase);
+               if (!target) return typed;
 
                 if (typed) {
                         if (typed.toLowerCase() !== phrase) {
@@ -975,13 +1000,16 @@ export default class DynamicDates extends Plugin {
                                         .join(" ");
                         }
 
-                        if (phraseToMoment(typed.toLowerCase()) && !needsYearAlias(typed)) {
-                                return formatTypedPhrase(typed);
-                        }
+                       const typedMoment = (this as any).momentForPhrase
+                               ? (this as any).momentForPhrase(typed.toLowerCase())
+                               : phraseToMoment(typed.toLowerCase());
+                       if (typedMoment && !needsYearAlias(typed)) {
+                               return formatTypedPhrase(typed);
+                       }
 
-                        if (phraseToMoment(typed.toLowerCase()) && needsYearAlias(typed)) {
-                                return target.format("MMMM Do, YYYY");
-                        }
+                       if (typedMoment && needsYearAlias(typed)) {
+                               return target.format("MMMM Do, YYYY");
+                       }
                 }
 
                 return phrase
@@ -1028,7 +1056,7 @@ export default class DynamicDates extends Plugin {
         }
 
         linkForPhrase(phrase: string): string | null {
-                const m = phraseToMoment(phrase);
+                const m = this.momentForPhrase(phrase);
                 if (!m) return null;
                 const value = m.format(this.getDateFormat());
                 const alias = this.buildAlias(phrase, "");
