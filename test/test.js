@@ -14,11 +14,11 @@
   const settingsSrc = settingsCode.match(/exports\.DEFAULT_SETTINGS\s*=\s*{[^]*?};/);
   if (!settingsSrc) throw new Error('DEFAULT_SETTINGS not found');
   const settingsCodeAdjusted = settingsSrc[0].replace('exports.DEFAULT_SETTINGS', 'this.DEFAULT_SETTINGS');
-  const helpersSrc = code.match(/function nthWeekdayOfMonth[^]*?function needsYearAlias[^]*?function isHolidayQualifier[^]*?function formatTypedPhrase[^]*?function parseChronoPhrase[^]*?\nfunction phraseToMoment/);
+  const helpersSrc = code.match(/function nthWeekdayOfMonth[^]*?function needsYearAlias[^]*?function isHolidayQualifier[^]*?function formatTypedPhrase[^]*?\nconst PHRASES/);
   if (!helpersSrc) throw new Error('helper functions not found');
   const helpersCode = helpersSrc[0]
     .replace(/const DEFAULT_SETTINGS[^]*?};/, '')
-    .replace(/\nfunction phraseToMoment[^]*/, '');
+    .replace(/\nconst PHRASES[^]*/, '');
 
   /* ------------------------------------------------------------------ */
   /* Minimal runtime stubs                                              */
@@ -107,8 +107,7 @@
     Setting,
     normalizePath: p => p.replace(/\\/g, '/')
   };
-  const chrono = require('chrono-node');
-  const context = { moment, WEEKDAYS, MONTHS, BASE_WORDS, EditorSuggest, KeyboardEvent, Plugin, PluginSettingTab, Setting, obsidian_1, chrono };
+  const context = { moment, WEEKDAYS, MONTHS, BASE_WORDS, EditorSuggest, KeyboardEvent, Plugin, PluginSettingTab, Setting, obsidian_1 };
   vm.createContext(context);
   vm.runInContext('this.MONTH_ABBR = this.MONTHS.map(m => m.slice(0,3));', context);
   vm.runInContext('this.expandMonthName = function(name){ const idx = this.MONTH_ABBR.indexOf(name.slice(0,3).toLowerCase()); return idx >= 0 ? this.MONTHS[idx] : name; };', context);

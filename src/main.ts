@@ -18,7 +18,6 @@ import {
 // Settings
 
 import { DDSettings, DEFAULT_SETTINGS } from "./settings";
-import * as chrono from "chrono-node";
 
 // Phrase helpers
 
@@ -455,25 +454,6 @@ type PhraseToMomentFunc = {
         holidayOverrides: Record<string, boolean>;
 };
 
-function parseChronoPhrase(text: string, now: moment.Moment): moment.Moment | null {
-        const ref: Date = (now as any).toDate ? (now as any).toDate() : (now as any).d || new Date();
-        const base = chrono.en.parseDate(text, ref);
-        if (!base) return null;
-        let date = base;
-        const lower = text.toLowerCase();
-        const refDate: Date = ref;
-        const hasYear = /\b\d{2,4}\b/.test(text);
-        if (date < refDate && !/(last|ago|previous)/.test(lower) && !hasYear) {
-                const fwd = chrono.en.parseDate(text, refDate, { forwardDate: true });
-                if (fwd) date = fwd;
-        }
-        let m = moment(date);
-        if (!hasYear && !/(last|next|ago|previous)/.test(lower)) {
-                m = closestDate(m, now);
-        }
-        return m;
-}
-
 function phraseToMoment(phrase: string): moment.Moment | null {
         const now = moment();
         const lower = normalizeWeekdayAliases(phrase.toLowerCase().trim());
@@ -526,7 +506,46 @@ function phraseToMoment(phrase: string): moment.Moment | null {
                 }
         }
 
-        if (/\b(?:last|next)\s+(?:today|yesterday|tomorrow)\b/.test(lower)) return null;
+        if (lower === "today") return now;
+        if (lower === "yesterday") return now.clone().subtract(1, "day");
+        if (lower === "tomorrow") return now.clone().add(1, "day");
+
+        const rel = lower.match(/^in (\d+) (day|days|week|weeks)$/);
+        if (rel) {
+                const n = parseInt(rel[1]);
+                if (!isNaN(n)) return now.clone().add(n * (rel[2].startsWith('week') ? 7 : 1), "day");
+        }
+        const ago = lower.match(/^(\d+) (day|days|week|weeks) ago$/);
+        if (ago) {
+                const n = parseInt(ago[1]);
+                if (!isNaN(n)) return now.clone().subtract(n * (ago[2].startsWith('week') ? 7 : 1), "day");
+        }
+
+        const mdy = lower.match(/^(jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:tember)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)\s+(\d{1,2})(?:st|nd|rd|th)?(?:,)?\s*(\d{2,4})$/i);
+        if (mdy) {
+                let monthName = expandMonthName(mdy[1]);
+                const dayNum = parseInt(mdy[2]);
+                let yearNum = parseInt(mdy[3]);
+                if (!isNaN(dayNum) && !isNaN(yearNum)) {
+                        if (yearNum < 100) yearNum += 2000;
+                        const idx = MONTHS.indexOf(monthName.toLowerCase());
+                        const target = moment(new Date(yearNum, idx, dayNum));
+                        if (!target.isValid()) return null;
+                        return target;
+                }
+        }
+
+        const lastMd = lower.match(/^last\s+(jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:tember)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)\s+(\d{1,2}\w*)$/i);
+        if (lastMd) {
+                let monthName = expandMonthName(lastMd[1]);
+                const dayNum = parseInt(lastMd[2]);
+                if (!isNaN(dayNum)) {
+                        const target = now.clone().month(monthName).date(dayNum);
+                        if (!target.isValid()) return null;
+                        if (!target.isBefore(now, "day")) target.subtract(1, "year");
+                        return target;
+                }
+        }
 
         const justDay = lower.match(/^(?:the\s+)?(\d{1,2})(?:st|nd|rd|th)?$/);
         if (justDay) {
@@ -544,7 +563,7 @@ function phraseToMoment(phrase: string): moment.Moment | null {
         if (beforeWd) return phraseToMoment(`last ${beforeWd[1]}`);
 
         const nthWd = lower.match(/^(?:the\s+)?(first|second|third|fourth|fifth|last)\s+(sunday|monday|tuesday|wednesday|thursday|friday|saturday)\s+(?:in|of)\s+(jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:tember)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)(?:\s+(\d{2,4}))?/i);
-                if (nthWd) {
+        if (nthWd) {
                 const order = nthWd[1];
                 const wd = WEEKDAYS.indexOf(nthWd[2]);
                 const monthName = expandMonthName(nthWd[3]);
@@ -580,28 +599,36 @@ function phraseToMoment(phrase: string): moment.Moment | null {
                 return target;
         }
 
-        const chronoDate = parseChronoPhrase(phrase, now);
-        if (chronoDate) return chronoDate;
-
         const weekdays = WEEKDAYS;
 
         for (let i = 0; i < 7; i++) {
                 const name = weekdays[i];
 
-                if (lower === name) {
-                        const diff = (i - now.weekday() + 7) % 7;
-                        return now.clone().add(diff, "day");
-                }
-                if (lower === `next ${name}`) {
-                        const diff = (i - now.weekday() + 7) % 7 || 7;
-                        return now.clone().add(diff, "day");
-                }
+		if (lower === name) {
+			const diff = (i - now.weekday() + 7) % 7;
+			return now.clone().add(diff, "day");
+		}
+		if (lower === `next ${name}`) {
+			const diff = (i - now.weekday() + 7) % 7 || 7;
+			return now.clone().add(diff, "day");
+		}
                 if (lower === `last ${name}`) {
                         const diff = (now.weekday() - i + 7) % 7 || 7;
                         return now.clone().subtract(diff, "day");
                 }
         }
 
+        // Month + day (e.g., "august 20" or "aug 20th")
+        const md = lower.match(/^(jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:tember)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)\s+(\d{1,2}\w*)$/i);
+        if (md) {
+                let monthName = expandMonthName(md[1]);
+                const dayNum = parseInt(md[2]);
+                if (!isNaN(dayNum)) {
+                        const target = now.clone().month(monthName).date(dayNum);
+                        if (!target.isValid()) return null;
+                        return closestDate(target, now);
+                }
+        }
         return null;
 }
 

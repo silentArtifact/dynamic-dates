@@ -16,8 +16,5 @@
   "author": "Matthew Gromer",
   "devDependencies": {
     "typescript": "^5.8.3"
-  },
-  "dependencies": {
-    "chrono-node": "^2.8.2"
   }
 }
