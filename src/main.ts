@@ -21,6 +21,19 @@ import { DDSettings, DEFAULT_SETTINGS } from "./settings";
 
 // Phrase helpers
 
+const BASE_WORDS = [
+        "today",
+        "yesterday",
+        "tomorrow",
+        "monday",
+        "tuesday",
+        "wednesday",
+        "thursday",
+        "friday",
+        "saturday",
+        "sunday",
+];
+
 const WEEKDAYS = [
         "sunday",
         "monday",
@@ -29,13 +42,6 @@ const WEEKDAYS = [
         "thursday",
         "friday",
         "saturday",
-];
-
-const BASE_WORDS = [
-        "today",
-        "yesterday",
-        "tomorrow",
-        ...WEEKDAYS,
 ];
 
 const MONTHS = [
