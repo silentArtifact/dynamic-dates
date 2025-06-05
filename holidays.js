@@ -24,18 +24,6 @@ exports.prefixMatch = prefixMatch;
 exports.formatTypedPhrase = formatTypedPhrase;
 exports.phraseToMoment = phraseToMoment;
 const obsidian_1 = require("obsidian");
-exports.BASE_WORDS = [
-    "today",
-    "yesterday",
-    "tomorrow",
-    "monday",
-    "tuesday",
-    "wednesday",
-    "thursday",
-    "friday",
-    "saturday",
-    "sunday",
-];
 exports.WEEKDAYS = [
     "sunday",
     "monday",
@@ -44,6 +32,12 @@ exports.WEEKDAYS = [
     "thursday",
     "friday",
     "saturday",
+];
+exports.BASE_WORDS = [
+    "today",
+    "yesterday",
+    "tomorrow",
+    ...exports.WEEKDAYS,
 ];
 exports.MONTHS = [
     "january",
