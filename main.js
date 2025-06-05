@@ -1102,9 +1102,9 @@ class DDSettingTab extends obsidian_1.PluginSettingTab {
             this.plugin.settings.noAliasWithShift = v;
             await this.plugin.saveSettings();
         }));
+        containerEl.createEl("h3", { text: "Holiday settings" });
         new obsidian_1.Setting(containerEl)
-            .setName("Holiday settings")
-            .setDesc("Enable or disable holiday groups")
+            .setDesc("Enable or disable holiday groups and specific holidays")
             .addButton(b => b.setButtonText("Open")
             .onClick(() => {
             new HolidaySettingsModal(this.app, this.plugin).open();

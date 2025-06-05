@@ -1242,9 +1242,10 @@ class DDSettingTab extends PluginSettingTab {
                                         }),
                         );
 
+
+                (containerEl as any).createEl("h3", { text: "Holiday settings" });
                 new Setting(containerEl)
-                        .setName("Holiday settings")
-                        .setDesc("Enable or disable holiday groups")
+                        .setDesc("Enable or disable holiday groups and specific holidays")
                         .addButton(b =>
                                 b.setButtonText("Open")
                                  .onClick(() => {
