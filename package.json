@@ -2,11 +2,11 @@
   "name": "dynamic-dates",
   "version": "1.0.0",
   "description": "Obsidian plugin for natural language dates",
-  "main": "main.js",
+  "main": "plugin.js",
   "scripts": {
     "build": "tsc && cp dist/*.js ./",
     "test": "npm run build && node test/test.js",
-    "zip": "npm run build && zip -r dynamic-dates-$npm_package_version.zip main.js plugin.js holidays.js suggest.js manifest.json README.md LICENSE",
+    "zip": "npm run build && zip -r dynamic-dates-$npm_package_version.zip plugin.js holidays.js suggest.js manifest.json README.md LICENSE",
     "version": "node scripts/updateManifest.js"
   },
   "repository": {
