@@ -3,20 +3,27 @@
   const fs = require('fs');
   const vm = require('vm');
 
-  const code = fs.readFileSync('main.js', 'utf8');
-  const funcSrc = code.match(/function phraseToMoment\([^]*?\n\}/);
+  const holidaysCode = fs.readFileSync('dist/holidays.js', 'utf8');
+  const suggestCode = fs.readFileSync('dist/suggest.js', 'utf8');
+  const pluginCode = fs.readFileSync('dist/plugin.js', 'utf8');
+
+  const funcSrc = holidaysCode.match(/function phraseToMoment\([^]*?\n\}/);
   if (!funcSrc) throw new Error('phraseToMoment not found');
-  const classSrc = code.match(/class DDSuggest[^]*?\n\}/);
+  const classSrc = suggestCode.match(/class DDSuggest[^]*?\n\}/);
   if (!classSrc) throw new Error('DDSuggest class not found');
-  const pluginSrc = code.match(/class DynamicDates[^]*?\n\}/);
+  const pluginSrc = pluginCode.match(/class DynamicDates[^]*?\n\}/);
   if (!pluginSrc) throw new Error('DynamicDates class not found');
-  const settingsSrc = code.match(/const DEFAULT_SETTINGS =[^]*?};/);
+  const settingsSrc = pluginCode.match(/const DEFAULT_SETTINGS =[^]*?};/);
   if (!settingsSrc) throw new Error('DEFAULT_SETTINGS not found');
-  const helpersSrc = code.match(/function nthWeekdayOfMonth[^]*?function needsYearAlias[^]*?function isHolidayQualifier[^]*?function formatTypedPhrase[^]*?\nconst PHRASES/);
+  const helpersSrc = holidaysCode.match(/BASE_WORDS[^]*?phraseToMoment\.holidayOverrides = {};/);
   if (!helpersSrc) throw new Error('helper functions not found');
   const helpersCode = helpersSrc[0]
+    .replace(/"use strict";?/, '')
+    .replace(/Object\.defineProperty[^;]*;?/, '')
+    .replace(/const obsidian_1 = require\([^\n]+\);/, '')
     .replace(/const DEFAULT_SETTINGS[^]*?};/, '')
-    .replace(/\nconst PHRASES[^]*/, '');
+    .replace(/exports\./g, '')
+    .replace(/obsidian_1\.moment/g, 'moment');
 
   /* ------------------------------------------------------------------ */
   /* Minimal runtime stubs                                              */
@@ -112,9 +119,17 @@
   vm.runInContext(helpersCode, context);
   vm.runInContext('this.HOLIDAY_PHRASES = HOLIDAY_PHRASES;', context);
   vm.runInContext('this.PHRASES = this.BASE_WORDS.flatMap(w => this.WEEKDAYS.includes(w) ? [w, "last " + w, "next " + w] : [w]).concat(this.HOLIDAY_PHRASES.flatMap(h => [h, "last " + h, "next " + h]));', context);
-  vm.runInContext(funcSrc[0], context);
+  vm.runInContext('this.holidays_1 = { HOLIDAY_PHRASES, HOLIDAYS, GROUP_HOLIDAYS, holidayEnabled, WEEKDAYS, BASE_WORDS, phraseToMoment, isHolidayQualifier, properCase, isProperNoun, formatWord, formatWordPart, needsYearAlias, formatTypedPhrase, normalizePhrase, prefixMatch };', context);
+  const funcCode = funcSrc[0]
+    .replace(/"use strict";?/, '')
+    .replace(/const obsidian_1 = require\([^\n]+\);/, '')
+    .replace(/exports\./g, '')
+    .replace(/obsidian_1\.moment/g, 'moment');
+  vm.runInContext(funcCode, context);
   vm.runInContext(settingsSrc[0], context);
   vm.runInContext('this.DDSuggest=' + classSrc[0], context);
+  vm.runInContext('this.suggest_1 = { DDSuggest: this.DDSuggest };', context);
+  vm.runInContext('const holidays_1 = this.holidays_1; const suggest_1 = this.suggest_1;', context);
   vm.runInContext('this.DynamicDates=' + pluginSrc[0], context);
 
   const PHRASES = context.PHRASES;
