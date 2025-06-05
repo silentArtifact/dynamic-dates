@@ -12,6 +12,22 @@ Dynamic Dates is an Obsidian plugin that turns natural language phrases such as 
 - Convert an entire note's text to date links via the `Convert natural-language dates` command.
 - Built-in awareness of holidays across multiple regions, including U.S., Canadian and U.K. observances, with settings to enable or disable entire holiday groups or individual holidays.
 
+## Usage
+
+Open **Settings → Dynamic Dates** to configure how suggestions are inserted.  The
+tab lets you choose the accept key, toggle the <kbd>Shift</kbd> behaviour, and
+provides controls for holidays and custom phrases.
+
+- **Enable holiday groups**: Click **Holiday settings** then toggle a group such
+  as U.S. or U.K. holidays.  Expanding a group shows individual holidays that
+  can be switched on or off.
+- **Add custom date phrases**: Under **Custom date mappings** use the **Add
+  mapping** button to create phrases that resolve to a fixed month/day
+  (e.g. `Mid Year` → `06-01`).
+- **Convert natural-language dates**: Run the command of the same name from the
+  command palette to scan the active note and replace recognized phrases with
+  wiki links.
+
 ## Building
 
 Install dependencies first:
