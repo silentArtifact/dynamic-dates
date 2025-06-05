@@ -269,6 +269,11 @@
   await sugg.selectSuggestion('2024-06-28', new KeyboardEvent({ shiftKey:false, key:'Tab' }));
   assert.strictEqual(inserted.pop(), '[[2024-06-28|The last Friday in June]]');
 
+  // abbreviated month names should be capitalized with a period
+  sugg.context = { editor, start:{line:0,ch:0}, end:{line:0,ch:8}, query:'dec 26th' };
+  await sugg.selectSuggestion('2023-12-26', new KeyboardEvent({ shiftKey:false, key:'Tab' }));
+  assert.strictEqual(inserted.pop(), '[[2023-12-26|Dec. 26th]]');
+
 
   /* ------------------------------------------------------------------ */
   /* convertText utility                                               */

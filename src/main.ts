@@ -424,13 +424,25 @@ function prefixMatch(candidate: string, query: string): boolean {
         return normalizePhrase(candidate).startsWith(normalizePhrase(query));
 }
 
+const MONTH_ABBR_DOT = [
+        "jan", "feb", "mar", "apr", "aug", "sep", "oct", "nov", "dec",
+];
+
 function formatTypedPhrase(phrase: string): string {
         return phrase
                 .split(/\s+/)
                 .map((w) =>
                         w
                                 .split("-")
-                                .map((p) => (isProperNoun(p) ? properCase(p) : p))
+                                .map((p) => {
+                                        const stripped = p.replace(/\./g, "").toLowerCase();
+                                        if (MONTH_ABBR.includes(stripped)) {
+                                                const base = properCase(stripped);
+                                                const dot = MONTH_ABBR_DOT.includes(stripped) ? "." : (p.includes(".") ? "." : "");
+                                                return base + dot;
+                                        }
+                                        return isProperNoun(p) ? properCase(p) : p;
+                                })
                                 .join("-")
                 )
                 .join(" ");
