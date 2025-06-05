@@ -1,6 +1,3 @@
 dist/
 node_modules/
 *.zip
-plugin.js
-holidays.js
-suggest.js
