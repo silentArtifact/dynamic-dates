@@ -28,12 +28,13 @@ npm run build
 
 ## Packaging for the community plugin store
 
-Run the following command to create a release zip containing `main.js` and `manifest.json`:
+Run the following command to build the plugin and package all runtime files into a release zip:
 
 ```bash
 npm run zip
 ```
 
+This zip includes `main.js`, `plugin.js`, `holidays.js`, `suggest.js` and `manifest.json` so Obsidian can load the plugin without additional build steps.
 Upload the generated `dynamic-dates-<version>.zip` file when creating a GitHub release.
 
 When preparing a new release, run one of the standard version commands such as:
