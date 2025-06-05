@@ -26,8 +26,8 @@ Then run the build command:
 npm run build
 ```
 
-This compiles the TypeScript source and copies the generated `plugin.js`,
-`holidays.js` and `suggest.js` files to the project root.
+This compiles the TypeScript source and copies the generated `main.js`,
+`plugin.js`, `holidays.js` and `suggest.js` files to the project root.
 
 ## Packaging for the community plugin store
 
@@ -37,7 +37,7 @@ Run the following command to create a release zip containing the compiled JavaSc
 npm run zip
 ```
 
-This will produce `dynamic-dates-<version>.zip` containing `plugin.js`,
+This will produce `dynamic-dates-<version>.zip` containing `main.js`, `plugin.js`,
 `holidays.js`, `suggest.js`, `manifest.json`, `README.md` and `LICENSE`. Upload
 this file when creating a GitHub release.
 
