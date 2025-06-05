@@ -1030,6 +1030,49 @@ class DynamicDates extends obsidian_1.Plugin {
     }
 }
 exports.default = DynamicDates;
+function renderHolidaySettings(plugin, containerEl) {
+    containerEl.createEl("h3", { text: "Holiday groups" });
+    Object.entries(GROUP_HOLIDAYS).forEach(([g, list]) => {
+        const groupSetting = new obsidian_1.Setting(containerEl)
+            .setName(g)
+            .addToggle(t => t.setValue(plugin.settings.holidayGroups[g] ?? false)
+            .onChange(async (v) => {
+            plugin.settings.holidayGroups[g] = v;
+            await plugin.saveSettings();
+            renderHolidaySettings(plugin, containerEl);
+        }));
+        groupSetting.settingEl.classList.add("dd-holiday-group");
+        if (plugin.settings.holidayGroups[g] ?? false) {
+            list.forEach(h => {
+                const now = (0, obsidian_1.moment)();
+                let m = HOLIDAYS[h].calc(now.year());
+                if (m.isBefore(now, "day"))
+                    m = HOLIDAYS[h].calc(now.year() + 1);
+                const label = h.split(/\s+/).map(w => properCase(w)).join(" ") + ` (${m.format("MMMM Do")})`;
+                const subSetting = new obsidian_1.Setting(containerEl)
+                    .setName(label)
+                    .addToggle(t => t.setValue(plugin.settings.holidayOverrides[h] ?? true)
+                    .onChange(async (v) => {
+                    plugin.settings.holidayOverrides[h] = v;
+                    await plugin.saveSettings();
+                }));
+                subSetting.settingEl.classList.add("dd-holiday-sub");
+            });
+        }
+    });
+}
+class HolidaySettingsModal extends obsidian_1.Modal {
+    plugin;
+    constructor(app, plugin) {
+        super(app);
+        this.plugin = plugin;
+    }
+    onOpen() {
+        const { contentEl } = this;
+        contentEl.empty();
+        renderHolidaySettings(this.plugin, contentEl);
+    }
+}
 /** UI for the plugin settings displayed in Obsidian's settings pane. */
 class DDSettingTab extends obsidian_1.PluginSettingTab {
     plugin;
@@ -1059,35 +1102,13 @@ class DDSettingTab extends obsidian_1.PluginSettingTab {
             this.plugin.settings.noAliasWithShift = v;
             await this.plugin.saveSettings();
         }));
-        containerEl.createEl("h3", { text: "Holiday groups" });
-        Object.entries(GROUP_HOLIDAYS).forEach(([g, list]) => {
-            const groupSetting = new obsidian_1.Setting(containerEl)
-                .setName(g)
-                .addToggle(t => t.setValue(this.plugin.settings.holidayGroups[g] ?? false)
-                .onChange(async (v) => {
-                this.plugin.settings.holidayGroups[g] = v;
-                await this.plugin.saveSettings();
-                this.display();
-            }));
-            groupSetting.settingEl.classList.add("dd-holiday-group");
-            if (this.plugin.settings.holidayGroups[g] ?? false) {
-                list.forEach(h => {
-                    const now = (0, obsidian_1.moment)();
-                    let m = HOLIDAYS[h].calc(now.year());
-                    if (m.isBefore(now, "day"))
-                        m = HOLIDAYS[h].calc(now.year() + 1);
-                    const label = h.split(/\s+/).map(w => properCase(w)).join(" ") + ` (${m.format("MMMM Do")})`;
-                    const subSetting = new obsidian_1.Setting(containerEl)
-                        .setName(label)
-                        .addToggle(t => t.setValue(this.plugin.settings.holidayOverrides[h] ?? true)
-                        .onChange(async (v) => {
-                        this.plugin.settings.holidayOverrides[h] = v;
-                        await this.plugin.saveSettings();
-                    }));
-                    subSetting.settingEl.classList.add("dd-holiday-sub");
-                });
-            }
-        });
+        new obsidian_1.Setting(containerEl)
+            .setName("Holiday settings")
+            .setDesc("Enable or disable holiday groups")
+            .addButton(b => b.setButtonText("Open")
+            .onClick(() => {
+            new HolidaySettingsModal(this.app, this.plugin).open();
+        }));
         containerEl.createEl("h3", { text: "Custom date mappings" });
         new obsidian_1.Setting(containerEl)
             .setDesc("Map phrases to fixed dates, e.g. 'Mid Year' → '06-01'")

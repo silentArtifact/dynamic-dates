@@ -69,8 +69,18 @@ declare module "obsidian" {
 
     export class PluginSettingTab {
         constructor(app: App, plugin: Plugin);
+        app: App;
+        plugin: Plugin;
         containerEl: HTMLElement;
         display(): void;
+    }
+
+    export class Modal {
+        constructor(app: App);
+        containerEl: HTMLElement;
+        contentEl: HTMLElement;
+        open(): void;
+        close(): void;
     }
 
     export class Setting {
