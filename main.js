@@ -1,6 +1,42 @@
 "use strict";
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || (function () {
+    var ownKeys = function(o) {
+        ownKeys = Object.getOwnPropertyNames || function (o) {
+            var ar = [];
+            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
+            return ar;
+        };
+        return ownKeys(o);
+    };
+    return function (mod) {
+        if (mod && mod.__esModule) return mod;
+        var result = {};
+        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
+        __setModuleDefault(result, mod);
+        return result;
+    };
+})();
 Object.defineProperty(exports, "__esModule", { value: true });
 const obsidian_1 = require("obsidian");
+// Settings
+const settings_1 = require("./settings");
+const chrono = __importStar(require("chrono-node"));
 // Phrase helpers
 const BASE_WORDS = [
     "today",
@@ -286,13 +322,6 @@ function holidayEnabled(name) {
         return groups[g];
     return true;
 }
-const DEFAULT_SETTINGS = {
-    acceptKey: "Tab",
-    noAliasWithShift: false,
-    customDates: {},
-    holidayGroups: Object.fromEntries(Object.keys(GROUP_HOLIDAYS).map(g => [g, false])),
-    holidayOverrides: {},
-};
 function isProperNoun(word) {
     const w = word.toLowerCase();
     if (NON_PROPER_WORDS.has(w))
@@ -385,6 +414,26 @@ function formatTypedPhrase(phrase) {
         .join(" ");
 }
 const PHRASES = BASE_WORDS.flatMap((w) => WEEKDAYS.includes(w) ? [w, `last ${w}`, `next ${w}`] : [w]).concat(HOLIDAY_PHRASES);
+function parseChronoPhrase(text, now) {
+    const ref = now.toDate ? now.toDate() : now.d || new Date();
+    const base = chrono.en.parseDate(text, ref);
+    if (!base)
+        return null;
+    let date = base;
+    const lower = text.toLowerCase();
+    const refDate = ref;
+    const hasYear = /\b\d{2,4}\b/.test(text);
+    if (date < refDate && !/(last|ago|previous)/.test(lower) && !hasYear) {
+        const fwd = chrono.en.parseDate(text, refDate, { forwardDate: true });
+        if (fwd)
+            date = fwd;
+    }
+    let m = (0, obsidian_1.moment)(date);
+    if (!hasYear && !/(last|next|ago|previous)/.test(lower)) {
+        m = closestDate(m, now);
+    }
+    return m;
+}
 function phraseToMoment(phrase) {
     const now = (0, obsidian_1.moment)();
     const lower = normalizeWeekdayAliases(phrase.toLowerCase().trim());
@@ -438,52 +487,8 @@ function phraseToMoment(phrase) {
             return calc(y);
         }
     }
-    if (lower === "today")
-        return now;
-    if (lower === "yesterday")
-        return now.clone().subtract(1, "day");
-    if (lower === "tomorrow")
-        return now.clone().add(1, "day");
-    const rel = lower.match(/^in (\d+) (day|days|week|weeks)$/);
-    if (rel) {
-        const n = parseInt(rel[1]);
-        if (!isNaN(n))
-            return now.clone().add(n * (rel[2].startsWith('week') ? 7 : 1), "day");
-    }
-    const ago = lower.match(/^(\d+) (day|days|week|weeks) ago$/);
-    if (ago) {
-        const n = parseInt(ago[1]);
-        if (!isNaN(n))
-            return now.clone().subtract(n * (ago[2].startsWith('week') ? 7 : 1), "day");
-    }
-    const mdy = lower.match(/^(jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:tember)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)\s+(\d{1,2})(?:st|nd|rd|th)?(?:,)?\s*(\d{2,4})$/i);
-    if (mdy) {
-        let monthName = expandMonthName(mdy[1]);
-        const dayNum = parseInt(mdy[2]);
-        let yearNum = parseInt(mdy[3]);
-        if (!isNaN(dayNum) && !isNaN(yearNum)) {
-            if (yearNum < 100)
-                yearNum += 2000;
-            const idx = MONTHS.indexOf(monthName.toLowerCase());
-            const target = (0, obsidian_1.moment)(new Date(yearNum, idx, dayNum));
-            if (!target.isValid())
-                return null;
-            return target;
-        }
-    }
-    const lastMd = lower.match(/^last\s+(jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:tember)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)\s+(\d{1,2}\w*)$/i);
-    if (lastMd) {
-        let monthName = expandMonthName(lastMd[1]);
-        const dayNum = parseInt(lastMd[2]);
-        if (!isNaN(dayNum)) {
-            const target = now.clone().month(monthName).date(dayNum);
-            if (!target.isValid())
-                return null;
-            if (!target.isBefore(now, "day"))
-                target.subtract(1, "year");
-            return target;
-        }
-    }
+    if (/\b(?:last|next)\s+(?:today|yesterday|tomorrow)\b/.test(lower))
+        return null;
     const justDay = lower.match(/^(?:the\s+)?(\d{1,2})(?:st|nd|rd|th)?$/);
     if (justDay) {
         const dayNum = parseInt(justDay[1]);
@@ -531,6 +536,9 @@ function phraseToMoment(phrase) {
         }
         return target;
     }
+    const chronoDate = parseChronoPhrase(phrase, now);
+    if (chronoDate)
+        return chronoDate;
     const weekdays = WEEKDAYS;
     for (let i = 0; i < 7; i++) {
         const name = weekdays[i];
@@ -545,18 +553,6 @@ function phraseToMoment(phrase) {
         if (lower === `last ${name}`) {
             const diff = (now.weekday() - i + 7) % 7 || 7;
             return now.clone().subtract(diff, "day");
-        }
-    }
-    // Month + day (e.g., "august 20" or "aug 20th")
-    const md = lower.match(/^(jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:tember)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)\s+(\d{1,2}\w*)$/i);
-    if (md) {
-        let monthName = expandMonthName(md[1]);
-        const dayNum = parseInt(md[2]);
-        if (!isNaN(dayNum)) {
-            const target = now.clone().month(monthName).date(dayNum);
-            if (!target.isValid())
-                return null;
-            return closestDate(target, now);
         }
     }
     return null;
@@ -764,7 +760,7 @@ class DDSuggest extends obsidian_1.EditorSuggest {
  */
 class DynamicDates extends obsidian_1.Plugin {
     static makeNode() { return { children: new Map(), phrase: null }; }
-    settings = DEFAULT_SETTINGS;
+    settings = settings_1.DEFAULT_SETTINGS;
     customMap = {};
     /** Combined regex built from all phrases */
     combinedRegex = null;
@@ -957,11 +953,12 @@ class DynamicDates extends obsidian_1.Plugin {
         console.log("Dynamic Dates unloaded");
     }
     async loadSettings() {
-        this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
+        this.settings = Object.assign({}, settings_1.DEFAULT_SETTINGS, await this.loadData());
         if (!this.settings.customDates)
             this.settings.customDates = {};
-        if (!this.settings.holidayGroups)
+        if (!this.settings.holidayGroups || Object.keys(this.settings.holidayGroups).length === 0) {
             this.settings.holidayGroups = Object.fromEntries(Object.keys(GROUP_HOLIDAYS).map(g => [g, false]));
+        }
         if (!this.settings.holidayOverrides)
             this.settings.holidayOverrides = {};
         this.refreshCustomMap();
