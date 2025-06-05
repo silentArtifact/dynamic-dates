@@ -519,5 +519,16 @@
   assert.strictEqual(isHolidayQualifier('last thanksgiving'), true);
   assert.strictEqual(isHolidayQualifier('next random'), false);
 
+  /* ------------------------------------------------------------------ */
+  /* Packaging check                                                     */
+  /* ------------------------------------------------------------------ */
+  const child_process = require('child_process');
+  const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8'));
+  child_process.execSync('npm run zip', { stdio: 'ignore' });
+  const zipName = `dynamic-dates-${pkg.version}.zip`;
+  const zipList = child_process.execSync(`unzip -l ${zipName}`).toString();
+  assert.ok(zipList.includes('settings.js'), 'settings.js missing from zip');
+  fs.unlinkSync(zipName);
+
   console.log('All tests passed');
 })();
