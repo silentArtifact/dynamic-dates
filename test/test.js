@@ -528,6 +528,24 @@
   const zipName = `dynamic-dates-${pkg.version}.zip`;
   const zipList = child_process.execSync(`unzip -l ${zipName}`).toString();
   assert.ok(zipList.includes('settings.js'), 'settings.js missing from zip');
+
+  const os = require('os');
+  const path = require('path');
+  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'dd-'));
+  child_process.execSync(`unzip -q ${zipName} -d ${tmpDir}`);
+  const nodeModules = path.join(tmpDir, 'node_modules/obsidian');
+  fs.mkdirSync(nodeModules, { recursive: true });
+  fs.writeFileSync(path.join(nodeModules, 'index.js'),
+    `module.exports={Plugin:class{},PluginSettingTab:class{},EditorSuggest:class{},Setting:class{setName(){return this;}setDesc(){return this;}addDropdown(){return this;}addToggle(){return this;}addText(){return this;}addExtraButton(){return this;}},moment:()=>({format:()=>'',year:()=>0,clone(){return this;},diff:()=>0}),Modal:class{},normalizePath:p=>p};`);
+
+  let err = null;
+  try {
+    require(path.join(tmpDir, 'main.js'));
+  } catch (e) {
+    err = e;
+  }
+  assert.ok(!err || !/Cannot find module '\\.\/settings'/.test(err.message), 'settings module failed to load');
+  fs.rmSync(tmpDir, { recursive: true, force: true });
   fs.unlinkSync(zipName);
 
   console.log('All tests passed');
