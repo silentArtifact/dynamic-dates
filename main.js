@@ -496,21 +496,27 @@ function phraseToMoment(phrase) {
         const monthName = expandMonthName(nthWd[3]);
         const yearText = nthWd[4];
         const monthIdx = MONTHS.indexOf(monthName.toLowerCase());
-        let target;
-        if (order === "last") {
-            const yearNum = yearText ? (parseInt(yearText) < 100 ? parseInt(yearText) + 2000 : parseInt(yearText)) : now.year();
-            target = lastWeekdayOfMonth(yearNum, monthIdx, wd);
-        }
-        else {
-            const map = { first: 1, second: 2, third: 3, fourth: 4, fifth: 5 };
-            const yearNum = yearText ? (parseInt(yearText) < 100 ? parseInt(yearText) + 2000 : parseInt(yearText)) : now.year();
-            target = nthWeekdayOfMonth(yearNum, monthIdx, wd, map[order]);
-        }
-        if (!yearText && target.isBefore(now, "day")) {
-            if (order === "last")
-                target = lastWeekdayOfMonth(now.year() + 1, monthIdx, wd);
-            else
-                target = nthWeekdayOfMonth(now.year() + 1, monthIdx, wd, { first: 1, second: 2, third: 3, fourth: 4, fifth: 5 }[order]);
+        const map = { first: 1, second: 2, third: 3, fourth: 4, fifth: 5 };
+        const parseYear = (y) => (parseInt(y) < 100 ? parseInt(y) + 2000 : parseInt(y));
+        const baseYear = yearText ? parseYear(yearText) : now.year();
+        const compute = (y) => order === "last"
+            ? lastWeekdayOfMonth(y, monthIdx, wd)
+            : nthWeekdayOfMonth(y, monthIdx, wd, map[order]);
+        let target = compute(baseYear);
+        if (!yearText) {
+            const prev = compute(baseYear - 1);
+            const next = compute(baseYear + 1);
+            const opts = [target, next, prev];
+            let best = opts[0];
+            let bestDiff = dayDiff(best, now);
+            for (const o of opts.slice(1)) {
+                const diff = dayDiff(o, now);
+                if (diff < bestDiff) {
+                    best = o;
+                    bestDiff = diff;
+                }
+            }
+            target = best;
         }
         return target;
     }
