@@ -9,6 +9,7 @@ import {
         normalizePath,
         Plugin,
         PluginSettingTab,
+        Modal,
         DailyNoteSettings,
         Setting,
         TFile,
@@ -1154,7 +1155,53 @@ export default class DynamicDates extends Plugin {
                         i = j;
                 }
 
-                return parts.join("");
+        return parts.join("");
+        }
+}
+
+function renderHolidaySettings(plugin: DynamicDates, containerEl: HTMLElement): void {
+        (containerEl as any).createEl("h3", { text: "Holiday groups" });
+        Object.entries(GROUP_HOLIDAYS).forEach(([g, list]) => {
+                const groupSetting = new Setting(containerEl)
+                        .setName(g)
+                        .addToggle(t =>
+                                t.setValue(plugin.settings.holidayGroups[g] ?? false)
+                                 .onChange(async (v: boolean) => {
+                                         plugin.settings.holidayGroups[g] = v;
+                                         await plugin.saveSettings();
+                                         renderHolidaySettings(plugin, containerEl);
+                                 }));
+                (groupSetting as any).settingEl.classList.add("dd-holiday-group");
+                if (plugin.settings.holidayGroups[g] ?? false) {
+                        list.forEach(h => {
+                                const now = moment();
+                                let m = HOLIDAYS[h].calc(now.year());
+                                if (m.isBefore(now, "day")) m = HOLIDAYS[h].calc(now.year() + 1);
+                                const label = h.split(/\s+/).map(w => properCase(w)).join(" ") + ` (${m.format("MMMM Do")})`;
+                                const subSetting = new Setting(containerEl)
+                                        .setName(label)
+                                        .addToggle(t =>
+                                                t.setValue(plugin.settings.holidayOverrides[h] ?? true)
+                                                 .onChange(async (v:boolean) => {
+                                                         plugin.settings.holidayOverrides[h] = v;
+                                                         await plugin.saveSettings();
+                                                 }));
+                                (subSetting as any).settingEl.classList.add("dd-holiday-sub");
+                        });
+                }
+        });
+}
+
+class HolidaySettingsModal extends Modal {
+        plugin: DynamicDates;
+        constructor(app: App, plugin: DynamicDates) {
+                super(app);
+                this.plugin = plugin;
+        }
+        onOpen(): void {
+                const { contentEl } = this as any;
+                contentEl.empty();
+                renderHolidaySettings(this.plugin, contentEl);
         }
 }
 
@@ -1195,36 +1242,14 @@ class DDSettingTab extends PluginSettingTab {
                                         }),
                         );
 
-                (containerEl as any).createEl("h3", { text: "Holiday groups" });
-                Object.entries(GROUP_HOLIDAYS).forEach(([g, list]) => {
-                        const groupSetting = new Setting(containerEl)
-                                .setName(g)
-                                .addToggle(t =>
-                                        t.setValue(this.plugin.settings.holidayGroups[g] ?? false)
-                                         .onChange(async (v:boolean) => {
-                                                 this.plugin.settings.holidayGroups[g] = v;
-                                                 await this.plugin.saveSettings();
-                                                 this.display();
-                                         }));
-                        (groupSetting as any).settingEl.classList.add("dd-holiday-group");
-                        if (this.plugin.settings.holidayGroups[g] ?? false) {
-                                list.forEach(h => {
-                                        const now = moment();
-                                        let m = HOLIDAYS[h].calc(now.year());
-                                        if (m.isBefore(now, "day")) m = HOLIDAYS[h].calc(now.year() + 1);
-                                        const label = h.split(/\s+/).map(w => properCase(w)).join(" ") + ` (${m.format("MMMM Do")})`;
-                                        const subSetting = new Setting(containerEl)
-                                                .setName(label)
-                                                .addToggle(t =>
-                                                        t.setValue(this.plugin.settings.holidayOverrides[h] ?? true)
-                                                         .onChange(async (v:boolean) => {
-                                                                 this.plugin.settings.holidayOverrides[h] = v;
-                                                                 await this.plugin.saveSettings();
-                                                         }));
-                                        (subSetting as any).settingEl.classList.add("dd-holiday-sub");
-                                });
-                        }
-                });
+                new Setting(containerEl)
+                        .setName("Holiday settings")
+                        .setDesc("Enable or disable holiday groups")
+                        .addButton(b =>
+                                b.setButtonText("Open")
+                                 .onClick(() => {
+                                         new HolidaySettingsModal(this.app, this.plugin).open();
+                                 }));
 
                 (containerEl as any).createEl("h3", { text: "Custom date mappings" });
                 new Setting(containerEl)
