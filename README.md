@@ -26,15 +26,20 @@ Then run the build command:
 npm run build
 ```
 
+This compiles the TypeScript source and copies the generated `main.js`,
+`plugin.js`, `holidays.js` and `suggest.js` files to the project root.
+
 ## Packaging for the community plugin store
 
-Run the following command to create a release zip containing `main.js` and `manifest.json`:
+Run the following command to create a release zip containing the compiled JavaScript files and manifest:
 
 ```bash
 npm run zip
 ```
 
-Upload the generated `dynamic-dates-<version>.zip` file when creating a GitHub release.
+This will produce `dynamic-dates-<version>.zip` containing `main.js`, `plugin.js`,
+`holidays.js`, `suggest.js`, `manifest.json`, `README.md` and `LICENSE`. Upload
+this file when creating a GitHub release.
 
 When preparing a new release, run one of the standard version commands such as:
 
