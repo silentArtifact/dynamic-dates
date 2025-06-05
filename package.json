@@ -4,7 +4,7 @@
   "description": "Obsidian plugin for natural language dates",
   "main": "plugin.js",
   "scripts": {
-    "build": "tsc && cp dist/*.js ./",
+    "build": "tsc && cp dist/plugin.js dist/holidays.js dist/suggest.js ./",
     "test": "npm run build && node test/test.js",
     "zip": "npm run build && zip -r dynamic-dates-$npm_package_version.zip plugin.js holidays.js suggest.js manifest.json README.md LICENSE",
     "version": "node scripts/updateManifest.js"
