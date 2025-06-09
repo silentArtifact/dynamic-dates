@@ -42,8 +42,8 @@ Then run the build command:
 npm run build
 ```
 
-This compiles the TypeScript source and copies the generated `main.js`,
-`plugin.js`, `holidays.js` and `suggest.js` files to the project root.
+This compiles the TypeScript source and copies everything in `dist/` to the
+project root, preserving any subdirectories.
 
 ## Packaging for the community plugin store
 
