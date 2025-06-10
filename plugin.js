@@ -295,6 +295,8 @@ class DynamicDates extends obsidian_1.Plugin {
     }
 }
 exports.default = DynamicDates;
+module.exports = DynamicDates;
+module.exports.default = DynamicDates;
 /** UI for the plugin settings displayed in Obsidian's settings pane. */
 class DDSettingTab extends obsidian_1.PluginSettingTab {
     plugin;

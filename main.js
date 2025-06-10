@@ -1156,3 +1156,8 @@ class DDSettingTab extends obsidian_1.PluginSettingTab {
         });
     }
 }
+// Ensure CommonJS compatibility when loaded without transpiler
+if (typeof module !== "undefined") {
+    module.exports = DynamicDates;
+    module.exports.default = DynamicDates;
+}
