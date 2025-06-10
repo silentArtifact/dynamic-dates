@@ -6,7 +6,7 @@
   "scripts": {
     "build": "tsc && cp -R dist/* ./",
     "test": "npm run build && node test/test.js",
-    "zip": "npm run build && zip -r dynamic-dates-$npm_package_version.zip main.js plugin.js settings.js holidays.js suggest.js manifest.json README.md LICENSE",
+    "zip": "npm run build && zip -r dynamic-dates-$npm_package_version.zip main.js plugin.js holidays.js suggest.js manifest.json README.md LICENSE",
     "version": "node scripts/updateManifest.js"
   },
   "repository": {
