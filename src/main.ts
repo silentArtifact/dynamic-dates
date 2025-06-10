@@ -15,6 +15,8 @@ import {
         TFile,
 } from "obsidian";
 
+declare const module: any;
+
 // Settings
 
 interface DDSettings {
@@ -1303,3 +1305,10 @@ class DDSettingTab extends PluginSettingTab {
 
         }
 }
+
+// Ensure CommonJS compatibility when loaded without transpiler
+if (typeof module !== "undefined") {
+  (module as any).exports = DynamicDates;
+  (module as any).exports.default = DynamicDates;
+}
+
