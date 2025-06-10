@@ -215,7 +215,14 @@ class DynamicDates extends obsidian_1.Plugin {
         console.log("Dynamic Dates unloaded");
     }
     async loadSettings() {
-        this.settings = Object.assign({}, exports.DEFAULT_SETTINGS, await this.loadData());
+        let data = {};
+        try {
+            data = await this.loadData() || {};
+        }
+        catch (e) {
+            console.error('Failed to load settings, using defaults', e);
+        }
+        this.settings = Object.assign({}, exports.DEFAULT_SETTINGS, data);
         if (!this.settings.customDates)
             this.settings.customDates = {};
         if (!this.settings.holidayGroups)
