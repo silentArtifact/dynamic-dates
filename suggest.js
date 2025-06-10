@@ -18,9 +18,8 @@ class DDSuggest extends obsidian_1.EditorSuggest {
         // Skip suggestions inside code or wiki links
         // inside fenced block?
         let fenced = false;
-        const WINDOW = 20;
-        const startLine = Math.max(0, cursor.line - WINDOW);
-        for (let i = startLine; i <= cursor.line; i++) {
+        // Scan from the top of the file to find unmatched fences
+        for (let i = 0; i <= cursor.line; i++) {
             let line = editor.getLine(i);
             if (i === cursor.line)
                 line = line.slice(0, cursor.ch);
