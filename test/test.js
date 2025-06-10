@@ -4,16 +4,14 @@
   const vm = require('vm');
 
   const code = fs.readFileSync('main.js', 'utf8');
-  const settingsCode = fs.readFileSync('settings.js', 'utf8');
   const funcSrc = code.match(/function phraseToMoment\([^]*?\n\}/);
   if (!funcSrc) throw new Error('phraseToMoment not found');
   const classSrc = code.match(/class DDSuggest[^]*?\n\}/);
   if (!classSrc) throw new Error('DDSuggest class not found');
   const pluginSrc = code.match(/class DynamicDates[^]*?\n\}/);
   if (!pluginSrc) throw new Error('DynamicDates class not found');
-  const settingsSrc = settingsCode.match(/exports\.DEFAULT_SETTINGS\s*=\s*{[^]*?};/);
+  const settingsSrc = code.match(/const DEFAULT_SETTINGS =[^]*?};/);
   if (!settingsSrc) throw new Error('DEFAULT_SETTINGS not found');
-  const settingsCodeAdjusted = settingsSrc[0].replace('exports.DEFAULT_SETTINGS', 'this.DEFAULT_SETTINGS');
   const helpersSrc = code.match(/function nthWeekdayOfMonth[^]*?function needsYearAlias[^]*?function isHolidayQualifier[^]*?function formatTypedPhrase[^]*?\nconst PHRASES/);
   if (!helpersSrc) throw new Error('helper functions not found');
   const helpersCode = helpersSrc[0]
@@ -115,8 +113,7 @@
   vm.runInContext('this.HOLIDAY_PHRASES = HOLIDAY_PHRASES;', context);
   vm.runInContext('this.PHRASES = this.BASE_WORDS.flatMap(w => this.WEEKDAYS.includes(w) ? [w, "last " + w, "next " + w] : [w]).concat(this.HOLIDAY_PHRASES.flatMap(h => [h, "last " + h, "next " + h]));', context);
   vm.runInContext(funcSrc[0], context);
-  vm.runInContext(settingsCodeAdjusted, context);
-  vm.runInContext('const settings_1 = { DEFAULT_SETTINGS: this.DEFAULT_SETTINGS };', context);
+  vm.runInContext(settingsSrc[0], context);
   vm.runInContext('this.DDSuggest=' + classSrc[0], context);
   vm.runInContext('this.DynamicDates=' + pluginSrc[0], context);
 
@@ -518,17 +515,6 @@
 
   assert.strictEqual(isHolidayQualifier('last thanksgiving'), true);
   assert.strictEqual(isHolidayQualifier('next random'), false);
-
-  /* ------------------------------------------------------------------ */
-  /* Packaging check                                                     */
-  /* ------------------------------------------------------------------ */
-  const child_process = require('child_process');
-  const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8'));
-  child_process.execSync('npm run zip', { stdio: 'ignore' });
-  const zipName = `dynamic-dates-${pkg.version}.zip`;
-  const zipList = child_process.execSync(`unzip -l ${zipName}`).toString();
-  assert.ok(zipList.includes('settings.js'), 'settings.js missing from zip');
-  fs.unlinkSync(zipName);
 
   console.log('All tests passed');
 })();

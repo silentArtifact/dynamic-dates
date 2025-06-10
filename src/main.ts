@@ -17,7 +17,15 @@ import {
 
 // Settings
 
-import { DDSettings, DEFAULT_SETTINGS } from "./settings";
+interface DDSettings {
+        /** @deprecated Date format is now taken from the daily notes plugin */
+        dateFormat?: string;
+        acceptKey: "Enter" | "Tab";
+        noAliasWithShift: boolean;
+        customDates: Record<string, string>;
+        holidayGroups: Record<string, boolean>;
+        holidayOverrides: Record<string, boolean>;
+}
 
 // Phrase helpers
 
@@ -337,6 +345,13 @@ function holidayEnabled(name: string): boolean {
         return true;
 }
 
+const DEFAULT_SETTINGS: DDSettings = {
+        acceptKey: "Tab",
+        noAliasWithShift: false,
+        customDates: {},
+        holidayGroups: Object.fromEntries(Object.keys(GROUP_HOLIDAYS).map(g => [g, false])),
+        holidayOverrides: {},
+};
 
 function isProperNoun(word: string): boolean {
         const w = word.toLowerCase();
@@ -1078,9 +1093,7 @@ export default class DynamicDates extends Plugin {
                 }
                 this.settings = Object.assign({}, DEFAULT_SETTINGS, data);
                 if (!this.settings.customDates) this.settings.customDates = {};
-                if (!this.settings.holidayGroups || Object.keys(this.settings.holidayGroups).length === 0) {
-                        this.settings.holidayGroups = Object.fromEntries(Object.keys(GROUP_HOLIDAYS).map(g => [g, false]));
-                }
+                if (!this.settings.holidayGroups) this.settings.holidayGroups = Object.fromEntries(Object.keys(GROUP_HOLIDAYS).map(g => [g, false]));
                 if (!this.settings.holidayOverrides) this.settings.holidayOverrides = {};
                 this.refreshCustomMap();
                 this.refreshHolidayMap();
