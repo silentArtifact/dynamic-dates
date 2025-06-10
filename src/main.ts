@@ -1307,7 +1307,7 @@ class DDSettingTab extends PluginSettingTab {
 }
 
 // Ensure CommonJS compatibility when loaded without transpiler
-if (typeof module !== "undefined") {
+if (typeof module !== "undefined" && typeof (module as any).exports !== "undefined") {
   (module as any).exports = DynamicDates;
   (module as any).exports.default = DynamicDates;
 }
