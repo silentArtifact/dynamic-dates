@@ -1070,7 +1070,13 @@ export default class DynamicDates extends Plugin {
 	}
 
         async loadSettings() {
-                this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
+                let data: Partial<DDSettings> = {};
+                try {
+                        data = await this.loadData() as any || {};
+                } catch (e) {
+                        console.error('Failed to load settings, using defaults', e);
+                }
+                this.settings = Object.assign({}, DEFAULT_SETTINGS, data);
                 if (!this.settings.customDates) this.settings.customDates = {};
                 if (!this.settings.holidayGroups || Object.keys(this.settings.holidayGroups).length === 0) {
                         this.settings.holidayGroups = Object.fromEntries(Object.keys(GROUP_HOLIDAYS).map(g => [g, false]));

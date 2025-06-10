@@ -1,6 +1,8 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 const obsidian_1 = require("obsidian");
+// Settings
+const settings_1 = require("./settings");
 // Phrase helpers
 const BASE_WORDS = [
     "today",
@@ -286,13 +288,6 @@ function holidayEnabled(name) {
         return groups[g];
     return true;
 }
-const DEFAULT_SETTINGS = {
-    acceptKey: "Tab",
-    noAliasWithShift: false,
-    customDates: {},
-    holidayGroups: Object.fromEntries(Object.keys(GROUP_HOLIDAYS).map(g => [g, false])),
-    holidayOverrides: {},
-};
 function isProperNoun(word) {
     const w = word.toLowerCase();
     if (NON_PROPER_WORDS.has(w))
@@ -764,7 +759,7 @@ class DDSuggest extends obsidian_1.EditorSuggest {
  */
 class DynamicDates extends obsidian_1.Plugin {
     static makeNode() { return { children: new Map(), phrase: null }; }
-    settings = DEFAULT_SETTINGS;
+    settings = settings_1.DEFAULT_SETTINGS;
     customMap = {};
     /** Combined regex built from all phrases */
     combinedRegex = null;
@@ -957,11 +952,19 @@ class DynamicDates extends obsidian_1.Plugin {
         console.log("Dynamic Dates unloaded");
     }
     async loadSettings() {
-        this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
+        let data = {};
+        try {
+            data = await this.loadData() || {};
+        }
+        catch (e) {
+            console.error('Failed to load settings, using defaults', e);
+        }
+        this.settings = Object.assign({}, settings_1.DEFAULT_SETTINGS, data);
         if (!this.settings.customDates)
             this.settings.customDates = {};
-        if (!this.settings.holidayGroups)
+        if (!this.settings.holidayGroups || Object.keys(this.settings.holidayGroups).length === 0) {
             this.settings.holidayGroups = Object.fromEntries(Object.keys(GROUP_HOLIDAYS).map(g => [g, false]));
+        }
         if (!this.settings.holidayOverrides)
             this.settings.holidayOverrides = {};
         this.refreshCustomMap();
