@@ -58,11 +58,10 @@ function weekdayOnOrBefore(year, month, day, weekday) {
     return target.subtract(diff, "day");
 }
 function dayDiff(a, b) {
-    const ma = a;
-    if (typeof ma.diff === "function")
-        return Math.abs(ma.diff(b, "day"));
-    const da = ma.d || ma.toDate();
-    const db = b.d || b.toDate();
+    if (typeof a.diff === "function")
+        return Math.abs(a.diff(b, "day"));
+    const da = a.d || a.toDate?.() || new Date(NaN);
+    const db = b.d || b.toDate?.() || new Date(NaN);
     return Math.abs(Math.round((da.getTime() - db.getTime()) / 86400000));
 }
 function closestDate(base, now) {
@@ -774,7 +773,7 @@ class DynamicDates extends obsidian_1.Plugin {
     prefixIndex = DynamicDates.makeNode();
     /** Cache of phrase -> moment keyed by phrase+date */
     dateCache = new Map();
-    constructor(app, manifest) {
+    constructor(app = {}, manifest = { id: "", name: "", version: "" }) {
         super(app, manifest);
         this.refreshPhrasesCache();
     }
@@ -1038,6 +1037,7 @@ class DynamicDates extends obsidian_1.Plugin {
 }
 exports.default = DynamicDates;
 function renderHolidaySettings(plugin, containerEl) {
+    containerEl.empty();
     containerEl.createEl("h3", { text: "Holiday groups" });
     Object.entries(GROUP_HOLIDAYS).forEach(([g, list]) => {
         const groupSetting = new obsidian_1.Setting(containerEl)
