@@ -29,6 +29,13 @@ interface DDSettings {
         holidayOverrides: Record<string, boolean>;
 }
 
+interface PluginManifest {
+       id: string;
+       name: string;
+       version: string;
+       [key: string]: unknown;
+}
+
 // Phrase helpers
 
 const BASE_WORDS = [
@@ -94,11 +101,16 @@ function weekdayOnOrBefore(year: number, month: number, day: number, weekday: nu
         return target.subtract(diff, "day");
 }
 
-function dayDiff(a: moment.Moment, b: moment.Moment): number {
-       const ma: any = a as any;
-       if (typeof ma.diff === "function") return Math.abs(ma.diff(b, "day"));
-       const da: Date = ma.d || ma.toDate();
-       const db: Date = (b as any).d || (b as any).toDate();
+interface MomentLike {
+       diff?: (other: MomentLike, unit: string) => number;
+       toDate?: () => Date;
+       d?: Date;
+}
+
+function dayDiff(a: MomentLike, b: MomentLike): number {
+       if (typeof a.diff === "function") return Math.abs(a.diff(b, "day"));
+       const da: Date = a.d || a.toDate?.() || new Date(NaN);
+       const db: Date = b.d || b.toDate?.() || new Date(NaN);
        return Math.abs(Math.round((da.getTime() - db.getTime()) / 86400000));
 }
 
@@ -891,8 +903,8 @@ export default class DynamicDates extends Plugin {
         /** Cache of phrase -> moment keyed by phrase+date */
         dateCache: Map<string, moment.Moment> = new Map();
 
-       constructor(app?: App, manifest?: any) {
-               super(app as any, manifest as any);
+       constructor(app: App = {} as App, manifest: PluginManifest = { id: "", name: "", version: "" }) {
+               super(app, manifest);
                this.refreshPhrasesCache();
        }
 
