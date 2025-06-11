@@ -1180,6 +1180,7 @@ export default class DynamicDates extends Plugin {
 }
 
 function renderHolidaySettings(plugin: DynamicDates, containerEl: HTMLElement): void {
+        containerEl.empty();
         (containerEl as any).createEl("h3", { text: "Holiday groups" });
         Object.entries(GROUP_HOLIDAYS).forEach(([g, list]) => {
                 const groupSetting = new Setting(containerEl)
