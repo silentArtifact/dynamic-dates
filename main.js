@@ -4,8 +4,12 @@ const obsidian_1 = require("obsidian");
 // Phrase helpers
 const BASE_WORDS = [
     "today",
+    "tdy",
     "yesterday",
+    "yday",
     "tomorrow",
+    "tmr",
+    "tmrw",
     "monday",
     "tuesday",
     "wednesday",
@@ -89,9 +93,13 @@ const WEEKDAY_ALIAS = {
     thurs: "thursday",
     fri: "friday",
     sat: "saturday",
+    tmr: "tomorrow",
+    tmrw: "tomorrow",
+    tdy: "today",
+    yday: "yesterday",
 };
 function normalizeWeekdayAliases(str) {
-    return str.replace(/\b(?:sun|mon|tues?|wed(?:s)?|thu(?:rs)?|thur|fri|sat)\b/g, (m) => WEEKDAY_ALIAS[m] || m);
+    return str.replace(/\b(?:sun|mon|tues?|wed(?:s)?|thu(?:rs)?|thur|fri|sat|tmrw?|tdy|yday)\b/g, (m) => WEEKDAY_ALIAS[m] || m);
 }
 function islamicDateInYear(gYear, iMonth, iDay) {
     const fmt = new Intl.DateTimeFormat("en-u-ca-islamic", {
