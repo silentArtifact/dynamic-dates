@@ -1,0 +1,10 @@
+# Exclude development and docs from package
+src/
+test/
+docs/
+.github/
+scripts/
+# build and tooling files
+tsconfig.json
+package-lock.json
+.gitignore
