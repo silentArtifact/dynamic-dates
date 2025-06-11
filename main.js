@@ -4,8 +4,12 @@ const obsidian_1 = require("obsidian");
 // Phrase helpers
 const BASE_WORDS = [
     "today",
+    "tdy",
     "yesterday",
+    "yday",
     "tomorrow",
+    "tmr",
+    "tmrw",
     "monday",
     "tuesday",
     "wednesday",
@@ -58,11 +62,10 @@ function weekdayOnOrBefore(year, month, day, weekday) {
     return target.subtract(diff, "day");
 }
 function dayDiff(a, b) {
-    const ma = a;
-    if (typeof ma.diff === "function")
-        return Math.abs(ma.diff(b, "day"));
-    const da = ma.d || ma.toDate();
-    const db = b.d || b.toDate();
+    if (typeof a.diff === "function")
+        return Math.abs(a.diff(b, "day"));
+    const da = a.d || a.toDate?.() || new Date(NaN);
+    const db = b.d || b.toDate?.() || new Date(NaN);
     return Math.abs(Math.round((da.getTime() - db.getTime()) / 86400000));
 }
 function closestDate(base, now) {
@@ -90,9 +93,13 @@ const WEEKDAY_ALIAS = {
     thurs: "thursday",
     fri: "friday",
     sat: "saturday",
+    tmr: "tomorrow",
+    tmrw: "tomorrow",
+    tdy: "today",
+    yday: "yesterday",
 };
 function normalizeWeekdayAliases(str) {
-    return str.replace(/\b(?:sun|mon|tues?|wed(?:s)?|thu(?:rs)?|thur|fri|sat)\b/g, (m) => WEEKDAY_ALIAS[m] || m);
+    return str.replace(/\b(?:sun|mon|tues?|wed(?:s)?|thu(?:rs)?|thur|fri|sat|tmrw?|tdy|yday)\b/g, (m) => WEEKDAY_ALIAS[m] || m);
 }
 function islamicDateInYear(gYear, iMonth, iDay) {
     const fmt = new Intl.DateTimeFormat("en-u-ca-islamic", {
@@ -774,7 +781,7 @@ class DynamicDates extends obsidian_1.Plugin {
     prefixIndex = DynamicDates.makeNode();
     /** Cache of phrase -> moment keyed by phrase+date */
     dateCache = new Map();
-    constructor(app, manifest) {
+    constructor(app = {}, manifest = { id: "", name: "", version: "" }) {
         super(app, manifest);
         this.refreshPhrasesCache();
     }

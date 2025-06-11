@@ -94,7 +94,10 @@
   }
 
   const WEEKDAYS = ['sunday','monday','tuesday','wednesday','thursday','friday','saturday'];
-  const BASE_WORDS = ['today','yesterday','tomorrow', ...WEEKDAYS];
+  const BASE_WORDS = [
+    'today','tdy','yesterday','yday','tomorrow','tmr','tmrw',
+    ...WEEKDAYS
+  ];
 
   const obsidian_1 = {
     moment,
@@ -142,6 +145,10 @@
   assert.strictEqual(fmt(phraseToMoment('today')), '2024-05-08');
   assert.strictEqual(fmt(phraseToMoment('yesterday')), '2024-05-07');
   assert.strictEqual(fmt(phraseToMoment('tomorrow')), '2024-05-09');
+  assert.strictEqual(fmt(phraseToMoment('tdy')), '2024-05-08');
+  assert.strictEqual(fmt(phraseToMoment('yday')), '2024-05-07');
+  assert.strictEqual(fmt(phraseToMoment('tmr')), '2024-05-09');
+  assert.strictEqual(fmt(phraseToMoment('tmrw')), '2024-05-09');
   assert.strictEqual(fmt(phraseToMoment('next Monday')), '2024-05-13');
   assert.strictEqual(fmt(phraseToMoment('last Friday')), '2024-05-03');
   assert.strictEqual(phraseToMoment('last today'), null);

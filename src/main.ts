@@ -40,8 +40,12 @@ interface PluginManifest {
 
 const BASE_WORDS = [
         "today",
+        "tdy",
         "yesterday",
+        "yday",
         "tomorrow",
+        "tmr",
+        "tmrw",
         "monday",
         "tuesday",
         "wednesday",
@@ -140,10 +144,14 @@ const WEEKDAY_ALIAS: Record<string, string> = {
         thurs: "thursday",
         fri: "friday",
         sat: "saturday",
+        tmr: "tomorrow",
+        tmrw: "tomorrow",
+        tdy: "today",
+        yday: "yesterday",
 };
 
 function normalizeWeekdayAliases(str: string): string {
-        return str.replace(/\b(?:sun|mon|tues?|wed(?:s)?|thu(?:rs)?|thur|fri|sat)\b/g, (m) => WEEKDAY_ALIAS[m] || m);
+        return str.replace(/\b(?:sun|mon|tues?|wed(?:s)?|thu(?:rs)?|thur|fri|sat|tmrw?|tdy|yday)\b/g, (m) => WEEKDAY_ALIAS[m] || m);
 }
 
 function islamicDateInYear(gYear: number, iMonth: number, iDay: number): moment.Moment {
