@@ -1,4 +1,4 @@
-(async () => {
+async function runTests() {
   const assert = require('assert');
   const fs = require('fs');
   const vm = require('vm');
@@ -516,5 +516,10 @@
   assert.strictEqual(isHolidayQualifier('last thanksgiving'), true);
   assert.strictEqual(isHolidayQualifier('next random'), false);
 
-  console.log('All tests passed');
-})();
+}
+
+describe('Dynamic Dates', function () {
+  it('should pass all assertions', async function () {
+    await runTests();
+  });
+});
