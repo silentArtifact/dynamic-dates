@@ -4,6 +4,7 @@ async function runTests() {
   const vm = require('vm');
 
   const code = fs.readFileSync('main.js', 'utf8');
+  const constantsCode = fs.readFileSync('constants.js', 'utf8');
   const funcSrc = code.match(/function phraseToMoment\([^]*?\n\}/);
   if (!funcSrc) throw new Error('phraseToMoment not found');
   const classSrc = code.match(/class DDSuggest[^]*?\n\}/);
@@ -12,9 +13,21 @@ async function runTests() {
   if (!pluginSrc) throw new Error('DynamicDates class not found');
   const settingsSrc = code.match(/const DEFAULT_SETTINGS =[^]*?};/);
   if (!settingsSrc) throw new Error('DEFAULT_SETTINGS not found');
-  const helpersSrc = code.match(/function nthWeekdayOfMonth[^]*?function needsYearAlias[^]*?function isHolidayQualifier[^]*?function formatTypedPhrase[^]*?\nconst PHRASES/);
-  if (!helpersSrc) throw new Error('helper functions not found');
-  const helpersCode = helpersSrc[0]
+  // Helper functions are now split between main.js and constants.js
+  const constantsHelpersSrc = constantsCode.match(/function nthWeekdayOfMonth[^]*?exports\.HOLIDAY_DEFS/s);
+  if (!constantsHelpersSrc) throw new Error('constants helper functions not found');
+  const mainHelpersSrc = code.match(/function isProperNoun[^]*?function needsYearAlias[^]*?function isHolidayQualifier[^]*?function formatTypedPhrase[^]*?\nconst PHRASES/);
+  if (!mainHelpersSrc) throw new Error('main helper functions not found');
+  // Also extract dayDiff, closestDate, WEEKDAY_ALIAS and normalizeWeekdayAliases
+  const dayDiffSrc = code.match(/function dayDiff[^]*?function closestDate[^]*?\n\}/);
+  if (!dayDiffSrc) throw new Error('dayDiff/closestDate not found');
+  const weekdayAliasSrc = code.match(/const WEEKDAY_ALIAS = \{[^]*?\n\};[^]*?function normalizeWeekdayAliases[^]*?\n\}/);
+  if (!weekdayAliasSrc) throw new Error('WEEKDAY_ALIAS not found');
+  const helpersCode = constantsHelpersSrc[0]
+    .replace(/exports\.HOLIDAY_DEFS[^]*/, '') +
+    dayDiffSrc[0] +
+    weekdayAliasSrc[0] +
+    mainHelpersSrc[0]
     .replace(/const DEFAULT_SETTINGS[^]*?};/, '')
     .replace(/\nconst PHRASES[^]*/, '');
 
@@ -96,6 +109,10 @@ async function runTests() {
   const WEEKDAYS = ['sunday','monday','tuesday','wednesday','thursday','friday','saturday'];
   const BASE_WORDS = ['today','yesterday','tomorrow', ...WEEKDAYS];
 
+  // Extract HOLIDAY_DEFS from constants.js
+  const holidayDefsSrc = constantsCode.match(/exports\.HOLIDAY_DEFS = \{[^]*?\n\};/s);
+  if (!holidayDefsSrc) throw new Error('HOLIDAY_DEFS not found in constants.js');
+
   const obsidian_1 = {
     moment,
     EditorSuggest,
@@ -105,12 +122,50 @@ async function runTests() {
     Setting,
     normalizePath: p => p.replace(/\\/g, '/')
   };
-  const context = { moment, WEEKDAYS, MONTHS, BASE_WORDS, EditorSuggest, KeyboardEvent, Plugin, PluginSettingTab, Setting, obsidian_1 };
+
+  // Create constants_1 stub for main.js imports
+  // nthWeekdayOfMonth and lastWeekdayOfMonth will be added after running helpersCode
+  const constants_1 = { WEEKDAYS, MONTHS, HOLIDAY_DEFS: {}, nthWeekdayOfMonth: null, lastWeekdayOfMonth: null };
+  const context = { moment, WEEKDAYS, MONTHS, BASE_WORDS, EditorSuggest, KeyboardEvent, Plugin, PluginSettingTab, Setting, obsidian_1, constants_1 };
   vm.createContext(context);
   vm.runInContext('this.MONTH_ABBR = this.MONTHS.map(m => m.slice(0,3));', context);
   vm.runInContext('this.expandMonthName = function(name){ const idx = this.MONTH_ABBR.indexOf(name.slice(0,3).toLowerCase()); return idx >= 0 ? this.MONTHS[idx] : name; };', context);
   vm.runInContext(helpersCode, context);
-  vm.runInContext('this.HOLIDAY_PHRASES = HOLIDAY_PHRASES;', context);
+  // Add helper functions to constants_1
+  context.constants_1.nthWeekdayOfMonth = context.nthWeekdayOfMonth;
+  context.constants_1.lastWeekdayOfMonth = context.lastWeekdayOfMonth;
+  // Build HOLIDAY_DEFS in context
+  vm.runInContext(holidayDefsSrc[0].replace('exports.HOLIDAY_DEFS', 'this.HOLIDAY_DEFS'), context);
+  context.constants_1.HOLIDAY_DEFS = context.HOLIDAY_DEFS;
+  // Build HOLIDAYS and HOLIDAY_PHRASES from HOLIDAY_DEFS
+  vm.runInContext(`
+    this.HOLIDAYS = {};
+    this.GROUP_HOLIDAYS = {};
+    for (const [canon, def] of Object.entries(this.HOLIDAY_DEFS)) {
+      if (!this.GROUP_HOLIDAYS[def.group]) this.GROUP_HOLIDAYS[def.group] = [];
+      this.GROUP_HOLIDAYS[def.group].push(canon);
+      this.HOLIDAYS[canon] = { ...def, canonical: canon };
+      for (const a of def.aliases || []) {
+        this.HOLIDAYS[a] = { group: def.group, calc: def.calc, canonical: canon };
+      }
+    }
+    this.HOLIDAY_PHRASES = Object.keys(this.HOLIDAYS);
+    this.NON_PROPER_WORDS = new Set(["the", "of", "and", "al", "la", "le", "el", "de"]);
+    this.HOLIDAY_WORDS = new Set(this.HOLIDAY_PHRASES.flatMap(p =>
+      p.split(/\\s+/).flatMap(w => w.split("-")).map(w => w.toLowerCase()).filter(w => !this.NON_PROPER_WORDS.has(w))
+    ));
+    this.holidayEnabled = function(name) {
+      const entry = this.HOLIDAYS[name];
+      if (!entry) return true;
+      const canonical = entry.canonical;
+      const overrides = this.phraseToMoment?.holidayOverrides || {};
+      if (canonical in overrides) return overrides[canonical];
+      const groups = this.phraseToMoment?.holidayGroups || {};
+      const g = entry.group;
+      if (g && g in groups) return groups[g];
+      return true;
+    };
+  `, context);
   vm.runInContext('this.PHRASES = this.BASE_WORDS.flatMap(w => this.WEEKDAYS.includes(w) ? [w, "last " + w, "next " + w] : [w]).concat(this.HOLIDAY_PHRASES.flatMap(h => [h, "last " + h, "next " + h]));', context);
   vm.runInContext(funcSrc[0], context);
   vm.runInContext(settingsSrc[0], context);

@@ -1,6 +1,7 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 const obsidian_1 = require("obsidian");
+const constants_1 = require("./constants");
 // Phrase helpers
 const BASE_WORDS = [
     "today",
@@ -14,48 +15,10 @@ const BASE_WORDS = [
     "saturday",
     "sunday",
 ];
-const WEEKDAYS = [
-    "sunday",
-    "monday",
-    "tuesday",
-    "wednesday",
-    "thursday",
-    "friday",
-    "saturday",
-];
-const MONTHS = [
-    "january",
-    "february",
-    "march",
-    "april",
-    "may",
-    "june",
-    "july",
-    "august",
-    "september",
-    "october",
-    "november",
-    "december",
-];
-const MONTH_ABBR = MONTHS.map(m => m.slice(0, 3));
+const MONTH_ABBR = constants_1.MONTHS.map(m => m.slice(0, 3));
 function expandMonthName(name) {
     const idx = MONTH_ABBR.indexOf(name.slice(0, 3).toLowerCase());
-    return idx >= 0 ? MONTHS[idx] : name;
-}
-function nthWeekdayOfMonth(year, month, weekday, n) {
-    const first = (0, obsidian_1.moment)(new Date(year, month, 1));
-    const diff = (weekday - first.weekday() + 7) % 7;
-    return first.add(diff + (n - 1) * 7, "day");
-}
-function lastWeekdayOfMonth(year, month, weekday) {
-    const last = (0, obsidian_1.moment)(new Date(year, month + 1, 1)).subtract(1, "day");
-    const diff = (last.weekday() - weekday + 7) % 7;
-    return last.subtract(diff, "day");
-}
-function weekdayOnOrBefore(year, month, day, weekday) {
-    const target = (0, obsidian_1.moment)(new Date(year, month, day));
-    const diff = (target.weekday() - weekday + 7) % 7;
-    return target.subtract(diff, "day");
+    return idx >= 0 ? constants_1.MONTHS[idx] : name;
 }
 function dayDiff(a, b) {
     if (typeof a.diff === "function")
@@ -93,146 +56,8 @@ const WEEKDAY_ALIAS = {
 function normalizeWeekdayAliases(str) {
     return str.replace(/\b(?:sun|mon|tues?|wed(?:s)?|thu(?:rs)?|thur|fri|sat)\b/g, (m) => WEEKDAY_ALIAS[m] || m);
 }
-function islamicDateInYear(gYear, iMonth, iDay) {
-    const fmt = new Intl.DateTimeFormat("en-u-ca-islamic", {
-        day: "numeric",
-        month: "numeric",
-        year: "numeric",
-    });
-    for (let m = 0; m < 12; m++) {
-        for (let d = 1; d <= 31; d++) {
-            const date = new Date(gYear, m, d);
-            if (date.getFullYear() !== gYear)
-                continue;
-            const parts = fmt.formatToParts(date);
-            const im = parseInt(parts.find((p) => p.type === "month")?.value || "");
-            const id = parseInt(parts.find((p) => p.type === "day")?.value || "");
-            if (im === iMonth && id === iDay)
-                return (0, obsidian_1.moment)(date);
-        }
-    }
-    return obsidian_1.moment.invalid();
-}
-function hebrewDateInYear(gYear, hMonth, hDay) {
-    const fmt = new Intl.DateTimeFormat("en-u-ca-hebrew", {
-        day: "numeric",
-        month: "long",
-        year: "numeric",
-    });
-    const target = hMonth.toLowerCase();
-    for (let m = 0; m < 12; m++) {
-        for (let d = 1; d <= 31; d++) {
-            const date = new Date(gYear, m, d);
-            if (date.getFullYear() !== gYear)
-                continue;
-            const parts = fmt.formatToParts(date);
-            const name = (parts.find((p) => p.type === "month")?.value || "").toLowerCase();
-            const day = parseInt(parts.find((p) => p.type === "day")?.value || "");
-            if (name === target && day === hDay)
-                return (0, obsidian_1.moment)(date);
-        }
-    }
-    return obsidian_1.moment.invalid();
-}
-function chineseDateInYear(gYear, cMonth, cDay) {
-    const fmt = new Intl.DateTimeFormat("en-u-ca-chinese", {
-        day: "numeric",
-        month: "numeric",
-        year: "numeric",
-    });
-    for (let m = 0; m < 12; m++) {
-        for (let d = 1; d <= 31; d++) {
-            const date = new Date(gYear, m, d);
-            if (date.getFullYear() !== gYear)
-                continue;
-            const parts = fmt.formatToParts(date);
-            const cm = parseInt(parts.find((p) => p.type === "month")?.value || "");
-            const cd = parseInt(parts.find((p) => p.type === "day")?.value || "");
-            if (cm === cMonth && cd === cDay)
-                return (0, obsidian_1.moment)(date);
-        }
-    }
-    return obsidian_1.moment.invalid();
-}
 const HOLIDAY_CACHE = {};
-function easter(y) {
-    const a = y % 19;
-    const b = Math.floor(y / 100);
-    const c = y % 100;
-    const d = Math.floor(b / 4);
-    const e = b % 4;
-    const f = Math.floor((b + 8) / 25);
-    const g = Math.floor((b - f + 1) / 3);
-    const h = (19 * a + b - d - g + 15) % 30;
-    const i = Math.floor(c / 4);
-    const k = c % 4;
-    const l = (32 + 2 * e + 2 * i - h - k) % 7;
-    const m = Math.floor((a + 11 * h + 22 * l) / 451);
-    const month = Math.floor((h + l - 7 * m + 114) / 31) - 1;
-    const day = ((h + l - 7 * m + 114) % 31) + 1;
-    return (0, obsidian_1.moment)(new Date(y, month, day));
-}
-const HOLIDAY_DEFS = {
-    "new year's day": { group: "US Federal Holidays", calc: (y) => (0, obsidian_1.moment)(new Date(y, 0, 1)) },
-    "martin luther king jr day": {
-        group: "US Federal Holidays",
-        calc: (y) => nthWeekdayOfMonth(y, 0, 1, 3),
-        aliases: ["mlk day", "martin luther king day"],
-    },
-    "presidents day": { group: "US Federal Holidays", calc: (y) => nthWeekdayOfMonth(y, 1, 1, 3) },
-    "memorial day": { group: "US Federal Holidays", calc: (y) => lastWeekdayOfMonth(y, 4, 1) },
-    "juneteenth": { group: "US Federal Holidays", calc: (y) => (0, obsidian_1.moment)(new Date(y, 5, 19)) },
-    "independence day": { group: "US Federal Holidays", calc: (y) => (0, obsidian_1.moment)(new Date(y, 6, 4)) },
-    "labor day": { group: "US Federal Holidays", calc: (y) => nthWeekdayOfMonth(y, 8, 1, 1) },
-    "columbus day": { group: "US Federal Holidays", calc: (y) => nthWeekdayOfMonth(y, 9, 1, 2) },
-    "veterans day": { group: "US Federal Holidays", calc: (y) => (0, obsidian_1.moment)(new Date(y, 10, 11)) },
-    "thanksgiving": {
-        group: "US Federal Holidays",
-        calc: (y) => nthWeekdayOfMonth(y, 10, 4, 4),
-        aliases: ["thanksgiving day"],
-    },
-    "christmas": {
-        group: "US Federal Holidays",
-        calc: (y) => (0, obsidian_1.moment)(new Date(y, 11, 25)),
-        aliases: ["christmas day"],
-    },
-    // US Cultural Holidays
-    "valentine's day": { group: "US Cultural Holidays", calc: (y) => (0, obsidian_1.moment)(new Date(y, 1, 14)) },
-    "halloween": { group: "US Cultural Holidays", calc: (y) => (0, obsidian_1.moment)(new Date(y, 9, 31)) },
-    "new year's eve": { group: "US Cultural Holidays", calc: (y) => (0, obsidian_1.moment)(new Date(y, 11, 31)) },
-    // Christian Holidays
-    "easter": { group: "Christian Holidays", calc: (y) => easter(y), aliases: ["easter sunday"] },
-    "good friday": { group: "Christian Holidays", calc: (y) => easter(y).subtract(2, "day") },
-    "ash wednesday": { group: "Christian Holidays", calc: (y) => easter(y).subtract(46, "day") },
-    // Islamic Holidays
-    "ramadan": { group: "Islamic Holidays", calc: (y) => islamicDateInYear(y, 9, 1) },
-    "eid al-fitr": { group: "Islamic Holidays", calc: (y) => islamicDateInYear(y, 10, 1) },
-    "eid al-adha": { group: "Islamic Holidays", calc: (y) => islamicDateInYear(y, 12, 10) },
-    // Jewish Holidays
-    "passover": { group: "Jewish Holidays", calc: (y) => hebrewDateInYear(y, "Nisan", 15) },
-    "rosh hashanah": { group: "Jewish Holidays", calc: (y) => hebrewDateInYear(y, "Tishri", 1) },
-    "yom kippur": { group: "Jewish Holidays", calc: (y) => hebrewDateInYear(y, "Tishri", 10) },
-    "hanukkah": { group: "Jewish Holidays", calc: (y) => hebrewDateInYear(y, "Kislev", 25) },
-    // Chinese Holidays
-    "chinese new year": {
-        group: "Chinese Holidays",
-        calc: (y) => chineseDateInYear(y, 1, 1),
-        aliases: ["lunar new year"],
-    },
-    "dragon boat festival": { group: "Chinese Holidays", calc: (y) => chineseDateInYear(y, 5, 5) },
-    "mid-autumn festival": { group: "Chinese Holidays", calc: (y) => chineseDateInYear(y, 8, 15) },
-    // Canadian Federal Holidays
-    "canada day": { group: "Canadian Federal Holidays", calc: (y) => (0, obsidian_1.moment)(new Date(y, 6, 1)) },
-    "victoria day": { group: "Canadian Federal Holidays", calc: (y) => weekdayOnOrBefore(y, 4, 24, 1) },
-    "canadian thanksgiving": {
-        group: "Canadian Federal Holidays",
-        calc: (y) => nthWeekdayOfMonth(y, 9, 1, 2),
-        aliases: ["thanksgiving (canada)", "thanksgiving canada"],
-    },
-    // UK Bank Holidays
-    "boxing day": { group: "UK Bank Holidays", calc: (y) => (0, obsidian_1.moment)(new Date(y, 11, 26)) },
-};
-for (const [name, def] of Object.entries(HOLIDAY_DEFS)) {
+for (const [name, def] of Object.entries(constants_1.HOLIDAY_DEFS)) {
     const orig = def.calc;
     def.calc = (y) => {
         const key = `${y}:${name}`;
@@ -246,7 +71,7 @@ for (const [name, def] of Object.entries(HOLIDAY_DEFS)) {
 }
 const HOLIDAYS = {};
 const GROUP_HOLIDAYS = {};
-for (const [canon, def] of Object.entries(HOLIDAY_DEFS)) {
+for (const [canon, def] of Object.entries(constants_1.HOLIDAY_DEFS)) {
     if (!GROUP_HOLIDAYS[def.group])
         GROUP_HOLIDAYS[def.group] = [];
     GROUP_HOLIDAYS[def.group].push(canon);
@@ -296,7 +121,7 @@ function isProperNoun(word) {
     const w = word.toLowerCase();
     if (NON_PROPER_WORDS.has(w))
         return false;
-    if (WEEKDAYS.includes(w) || MONTHS.includes(w) || HOLIDAY_WORDS.has(w))
+    if (constants_1.WEEKDAYS.includes(w) || constants_1.MONTHS.includes(w) || HOLIDAY_WORDS.has(w))
         return true;
     // check hyphenated parts
     if (w.includes("-")) {
@@ -383,7 +208,7 @@ function formatTypedPhrase(phrase) {
         .join("-"))
         .join(" ");
 }
-const PHRASES = BASE_WORDS.flatMap((w) => WEEKDAYS.includes(w) ? [w, `last ${w}`, `next ${w}`] : [w]).concat(HOLIDAY_PHRASES);
+const PHRASES = BASE_WORDS.flatMap((w) => constants_1.WEEKDAYS.includes(w) ? [w, `last ${w}`, `next ${w}`] : [w]).concat(HOLIDAY_PHRASES);
 function phraseToMoment(phrase) {
     const now = (0, obsidian_1.moment)();
     const lower = normalizeWeekdayAliases(phrase.toLowerCase().trim());
@@ -463,7 +288,7 @@ function phraseToMoment(phrase) {
         if (!isNaN(dayNum) && !isNaN(yearNum)) {
             if (yearNum < 100)
                 yearNum += 2000;
-            const idx = MONTHS.indexOf(monthName.toLowerCase());
+            const idx = constants_1.MONTHS.indexOf(monthName.toLowerCase());
             const target = (0, obsidian_1.moment)(new Date(yearNum, idx, dayNum));
             if (!target.isValid())
                 return null;
@@ -502,16 +327,16 @@ function phraseToMoment(phrase) {
     const nthWd = lower.match(/^(?:the\s+)?(first|second|third|fourth|fifth|last)\s+(sunday|monday|tuesday|wednesday|thursday|friday|saturday)\s+(?:in|of)\s+(jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:tember)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)(?:\s+(\d{2,4}))?/i);
     if (nthWd) {
         const order = nthWd[1];
-        const wd = WEEKDAYS.indexOf(nthWd[2]);
+        const wd = constants_1.WEEKDAYS.indexOf(nthWd[2]);
         const monthName = expandMonthName(nthWd[3]);
         const yearText = nthWd[4];
-        const monthIdx = MONTHS.indexOf(monthName.toLowerCase());
+        const monthIdx = constants_1.MONTHS.indexOf(monthName.toLowerCase());
         const map = { first: 1, second: 2, third: 3, fourth: 4, fifth: 5 };
         const parseYear = (y) => (parseInt(y) < 100 ? parseInt(y) + 2000 : parseInt(y));
         const baseYear = yearText ? parseYear(yearText) : now.year();
         const compute = (y) => order === "last"
-            ? lastWeekdayOfMonth(y, monthIdx, wd)
-            : nthWeekdayOfMonth(y, monthIdx, wd, map[order]);
+            ? (0, constants_1.lastWeekdayOfMonth)(y, monthIdx, wd)
+            : (0, constants_1.nthWeekdayOfMonth)(y, monthIdx, wd, map[order]);
         let target = compute(baseYear);
         if (!yearText) {
             const prev = compute(baseYear - 1);
@@ -530,7 +355,7 @@ function phraseToMoment(phrase) {
         }
         return target;
     }
-    const weekdays = WEEKDAYS;
+    const weekdays = constants_1.WEEKDAYS;
     for (let i = 0; i < 7; i++) {
         const name = weekdays[i];
         if (lower === name) {
@@ -796,7 +621,7 @@ class DynamicDates extends obsidian_1.Plugin {
         const holidays = HOLIDAY_PHRASES.filter(p => holidayEnabled(p));
         const holidayVariants = holidays.flatMap(h => [h, `last ${h}`, `next ${h}`]);
         this.phrasesCache = [
-            ...BASE_WORDS.flatMap(w => WEEKDAYS.includes(w) ? [w, `last ${w}`, `next ${w}`] : [w]),
+            ...BASE_WORDS.flatMap(w => constants_1.WEEKDAYS.includes(w) ? [w, `last ${w}`, `next ${w}`] : [w]),
             ...holidayVariants,
             ...Object.keys(this.settings.customDates || {}).map(p => p.toLowerCase()),
         ];
