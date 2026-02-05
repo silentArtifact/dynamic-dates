@@ -1,23 +1,9 @@
+const assert = require('assert');
+const fs = require('fs');
+const vm = require('vm');
+const path = require('path');
+
 async function runTests() {
-  const assert = require('assert');
-  const fs = require('fs');
-  const vm = require('vm');
-
-  const code = fs.readFileSync('main.js', 'utf8');
-  const funcSrc = code.match(/function phraseToMoment\([^]*?\n\}/);
-  if (!funcSrc) throw new Error('phraseToMoment not found');
-  const classSrc = code.match(/class DDSuggest[^]*?\n\}/);
-  if (!classSrc) throw new Error('DDSuggest class not found');
-  const pluginSrc = code.match(/class DynamicDates[^]*?\n\}/);
-  if (!pluginSrc) throw new Error('DynamicDates class not found');
-  const settingsSrc = code.match(/const DEFAULT_SETTINGS =[^]*?};/);
-  if (!settingsSrc) throw new Error('DEFAULT_SETTINGS not found');
-  const helpersSrc = code.match(/function nthWeekdayOfMonth[^]*?function needsYearAlias[^]*?function isHolidayQualifier[^]*?function formatTypedPhrase[^]*?\nconst PHRASES/);
-  if (!helpersSrc) throw new Error('helper functions not found');
-  const helpersCode = helpersSrc[0]
-    .replace(/const DEFAULT_SETTINGS[^]*?};/, '')
-    .replace(/\nconst PHRASES[^]*/, '');
-
   /* ------------------------------------------------------------------ */
   /* Minimal runtime stubs                                              */
   /* ------------------------------------------------------------------ */
@@ -54,6 +40,14 @@ async function runTests() {
       }
       return this.d < other.d;
     }
+    isAfter(other, unit) {
+      if (unit === 'day') {
+        const a = new Date(this.d.getFullYear(), this.d.getMonth(), this.d.getDate());
+        const b = new Date(other.d.getFullYear(), other.d.getMonth(), other.d.getDate());
+        return a > b;
+      }
+      return this.d > other.d;
+    }
     format(fmt) {
       if (fmt === 'YYYY-MM-DD') return this.d.toISOString().slice(0,10);
       const months = ['January','February','March','April','May','June','July','August','September','October','November','December'];
@@ -78,51 +72,54 @@ async function runTests() {
   }
   function moment(date) { return new Moment(date ?? moment.now); }
   moment.now = new Date('2024-05-08');
+  moment.invalid = () => new Moment(new Date(NaN));
 
-  class EditorSuggest { constructor(app) { this.app = app; this.context = null; } close() { this.closed = true; } }
-  class KeyboardEvent { constructor(init) { Object.assign(this, init); } }
-  class Plugin { constructor() { this.app = { vault:{}, workspace:{} }; } }
-  class PluginSettingTab {}
-  class Setting {
-    setName(){ return this; }
-    setDesc(){ return this; }
-    addText(){ return this; }
-    addToggle(){ return this; }
-    addDropdown(){ return this; }
-    addButton(){ return this; }
-    addExtraButton(){ return this; }
+  /* ------------------------------------------------------------------ */
+  /* Mock obsidian module and load the bundle via require interception   */
+  /* ------------------------------------------------------------------ */
+  const Module = require('module');
+  const mockObsidian = {
+    moment,
+    EditorSuggest: class { constructor(app) { this.app = app; this.context = null; } close() { this.closed = true; } },
+    Plugin: class { constructor() { this.app = { vault:{}, workspace:{} }; } },
+    PluginSettingTab: class {},
+    Modal: class { constructor(app) { this.app = app; } open() {} },
+    Setting: class {
+      setName(){ return this; }
+      setDesc(){ return this; }
+      addText(){ return this; }
+      addToggle(){ return this; }
+      addDropdown(){ return this; }
+      addButton(){ return this; }
+      addExtraButton(){ return this; }
+    },
+    normalizePath: p => p.replace(/\\/g, '/'),
+  };
+
+  // Provide browser globals that don't exist in Node.js
+  if (typeof globalThis.KeyboardEvent === 'undefined') {
+    globalThis.KeyboardEvent = class KeyboardEvent { constructor(init) { Object.assign(this, init); } };
   }
 
-  const WEEKDAYS = ['sunday','monday','tuesday','wednesday','thursday','friday','saturday'];
-  const BASE_WORDS = ['today','yesterday','tomorrow', ...WEEKDAYS];
-
-  const obsidian_1 = {
-    moment,
-    EditorSuggest,
-    KeyboardEvent,
-    Plugin,
-    PluginSettingTab,
-    Setting,
-    normalizePath: p => p.replace(/\\/g, '/')
+  // Intercept require('obsidian') to supply our mock
+  const originalResolve = Module._resolveFilename;
+  Module._resolveFilename = function(request) {
+    if (request === 'obsidian') return 'obsidian';
+    return originalResolve.apply(this, arguments);
   };
-  const context = { moment, WEEKDAYS, MONTHS, BASE_WORDS, EditorSuggest, KeyboardEvent, Plugin, PluginSettingTab, Setting, obsidian_1 };
-  vm.createContext(context);
-  vm.runInContext('this.MONTH_ABBR = this.MONTHS.map(m => m.slice(0,3));', context);
-  vm.runInContext('this.expandMonthName = function(name){ const idx = this.MONTH_ABBR.indexOf(name.slice(0,3).toLowerCase()); return idx >= 0 ? this.MONTHS[idx] : name; };', context);
-  vm.runInContext(helpersCode, context);
-  vm.runInContext('this.HOLIDAY_PHRASES = HOLIDAY_PHRASES;', context);
-  vm.runInContext('this.PHRASES = this.BASE_WORDS.flatMap(w => this.WEEKDAYS.includes(w) ? [w, "last " + w, "next " + w] : [w]).concat(this.HOLIDAY_PHRASES.flatMap(h => [h, "last " + h, "next " + h]));', context);
-  vm.runInContext(funcSrc[0], context);
-  vm.runInContext(settingsSrc[0], context);
-  vm.runInContext('this.DDSuggest=' + classSrc[0], context);
-  vm.runInContext('this.DynamicDates=' + pluginSrc[0], context);
+  require.cache['obsidian'] = { id: 'obsidian', filename: 'obsidian', loaded: true, exports: mockObsidian };
 
-  const PHRASES = context.PHRASES;
+  const mainPath = path.resolve(__dirname, '..', 'main.js');
+  delete require.cache[mainPath];
+  const mod = require(mainPath);
 
+  // Restore original resolver
+  Module._resolveFilename = originalResolve;
+
+  const DynamicDates = mod.default;
   const {
     phraseToMoment,
     DDSuggest,
-    DynamicDates,
     nthWeekdayOfMonth,
     lastWeekdayOfMonth,
     weekdayOnOrBefore,
@@ -133,7 +130,14 @@ async function runTests() {
     formatWord,
     needsYearAlias,
     isHolidayQualifier,
-  } = context;
+    HOLIDAY_PHRASES,
+    BASE_WORDS,
+    WEEKDAYS,
+  } = mod;
+
+  const PHRASES = BASE_WORDS.flatMap(w => WEEKDAYS.includes(w) ? [w, 'last ' + w, 'next ' + w] : [w])
+    .concat(HOLIDAY_PHRASES.flatMap(h => [h, 'last ' + h, 'next ' + h]));
+
   const fmt = m => m.d.toISOString().slice(0,10);
 
   /* ------------------------------------------------------------------ */
@@ -215,7 +219,7 @@ async function runTests() {
   /* ------------------------------------------------------------------ */
   /* onTrigger guard rails                                             */
   /* ------------------------------------------------------------------ */
-  const plugin = { settings: { dateFormat: 'YYYY-MM-DD', acceptKey:'Tab', noAliasWithShift: true }, dailyFolder:'', allPhrases: () => PHRASES, getDailyFolder(){ return this.dailyFolder; }, getDailySettings(){ return { folder:this.dailyFolder, template:'tpl.md', format:'YYYY-MM-DD' }; }, getDateFormat(){ return this.getDailySettings().format; }, customCanonical(){ return null; }, buildAlias: DynamicDates.prototype.buildAlias };
+  const plugin = { settings: { dateFormat: 'YYYY-MM-DD', acceptKey:'Tab', noAliasWithShift: true }, dailyFolder:'', allPhrases: () => PHRASES, getDailyFolder(){ return this.dailyFolder; }, getDailySettings(){ return { folder:this.dailyFolder, template:'tpl.md', format:'YYYY-MM-DD' }; }, getDateFormat(){ return this.getDailySettings().format; }, customCanonical(){ return null; }, buildAlias: DynamicDates.prototype.buildAlias, momentForPhrase: DynamicDates.prototype.momentForPhrase, dateCache: new Map() };
   const app = { vault: {} };
   const sugg = new DDSuggest(app, plugin);
 
@@ -322,7 +326,7 @@ async function runTests() {
   /* ------------------------------------------------------------------ */
   /* onTrigger context guards                                           */
   /* ------------------------------------------------------------------ */
-  const tPlugin = { settings: Object.assign({}, plugin.settings), dailyFolder:'Daily', allPhrases: () => PHRASES, getDailyFolder(){ return this.dailyFolder; }, getDailySettings(){ return { folder:this.dailyFolder, template:'tpl.md', format:'YYYY-MM-DD' }; }, getDateFormat(){ return this.getDailySettings().format; }, customCanonical(){ return null; }, buildAlias: DynamicDates.prototype.buildAlias };
+  const tPlugin = { settings: Object.assign({}, plugin.settings), dailyFolder:'Daily', allPhrases: () => PHRASES, getDailyFolder(){ return this.dailyFolder; }, getDailySettings(){ return { folder:this.dailyFolder, template:'tpl.md', format:'YYYY-MM-DD' }; }, getDateFormat(){ return this.getDailySettings().format; }, customCanonical(){ return null; }, buildAlias: DynamicDates.prototype.buildAlias, momentForPhrase: DynamicDates.prototype.momentForPhrase, dateCache: new Map() };
   const tApp = { vault:{}, workspace:{} };
   const tSugg = new DDSuggest(tApp, tPlugin);
 
