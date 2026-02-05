@@ -4,9 +4,9 @@
   "description": "Obsidian plugin for natural language dates",
   "main": "main.js",
   "scripts": {
-    "build": "tsc && cp -R dist/* ./",
+    "build": "tsc --noEmit && node esbuild.config.mjs",
     "test": "npm run build && mocha",
-    "zip": "npm run build && zip -r dynamic-dates-$npm_package_version.zip main.js plugin.js holidays.js suggest.js manifest.json README.md LICENSE",
+    "zip": "npm run build && zip -r dynamic-dates-$npm_package_version.zip main.js manifest.json README.md LICENSE",
     "version": "node scripts/updateManifest.js"
   },
   "repository": {
@@ -16,6 +16,7 @@
   "author": "Matthew Gromer",
   "devDependencies": {
     "@types/mocha": "^10.0.10",
+    "esbuild": "^0.27.2",
     "mocha": "^11.7.1",
     "typescript": "^5.8.3"
   }
