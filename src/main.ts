@@ -73,7 +73,8 @@ export default class DynamicDates extends Plugin {
 	phrasesCache: string[] = [];
 	/** Trie of phrases keyed by normalised prefix */
 	prefixIndex: PrefixTrieNode = DynamicDates.makeNode();
-	/** Cache of phrase -> moment keyed by phrase+date */
+	/** Cache of phrase -> moment keyed by phrase+date (bounded to prevent unbounded growth) */
+	private static readonly DATE_CACHE_MAX = 512;
 	dateCache: Map<string, moment.Moment> = new Map();
 
 	constructor(app: App = {} as App, manifest: PluginManifest = { id: "", name: "", version: "" }) {
@@ -141,7 +142,7 @@ export default class DynamicDates extends Plugin {
 	}
 
 	getDailySettings(): DailyNoteSettings {
-		const mc = (this.app as any).metadataCache;
+		const mc = this.app.metadataCache;
 		if (mc && typeof mc.getDailyNoteSettings === "function") {
 			try {
 				return mc.getDailyNoteSettings();
@@ -192,6 +193,11 @@ export default class DynamicDates extends Plugin {
 			const calc = phraseToMoment(phrase);
 			if (!calc) return null;
 			m = calc.clone();
+			if (this.dateCache.size >= DynamicDates.DATE_CACHE_MAX) {
+				// Evict oldest entry (first inserted key)
+				const first = this.dateCache.keys().next().value;
+				if (first !== undefined) this.dateCache.delete(first);
+			}
 			this.dateCache.set(key, m);
 		}
 		return m.clone();
@@ -253,8 +259,8 @@ export default class DynamicDates extends Plugin {
 			id: "convert-dates",
 			name: "Convert natural-language dates",
 			editorCallback: (editor: Editor) => {
-				const text = (editor as any).getValue();
-				(editor as any).setValue(this.convertText(text));
+				const text = editor.getValue();
+				editor.setValue(this.convertText(text));
 			},
 		});
 		console.log("Dynamic Dates loaded");
@@ -350,7 +356,7 @@ export default class DynamicDates extends Plugin {
 
 function renderHolidaySettings(plugin: DynamicDates, containerEl: HTMLElement): void {
 	containerEl.empty();
-	(containerEl as any).createEl("h3", { text: "Holiday groups" });
+	containerEl.createEl("h3", { text: "Holiday groups" });
 	Object.entries(GROUP_HOLIDAYS).forEach(([g, list]) => {
 		const groupSetting = new Setting(containerEl)
 			.setName(g)
@@ -361,7 +367,7 @@ function renderHolidaySettings(plugin: DynamicDates, containerEl: HTMLElement): 
 					 await plugin.saveSettings();
 					 renderHolidaySettings(plugin, containerEl);
 				 }));
-		(groupSetting as any).settingEl.classList.add("dd-holiday-group");
+		groupSetting.settingEl.classList.add("dd-holiday-group");
 		if (plugin.settings.holidayGroups[g] ?? false) {
 			list.forEach(h => {
 				const now = moment();
@@ -376,7 +382,7 @@ function renderHolidaySettings(plugin: DynamicDates, containerEl: HTMLElement): 
 							 plugin.settings.holidayOverrides[h] = v;
 							 await plugin.saveSettings();
 						 }));
-				(subSetting as any).settingEl.classList.add("dd-holiday-sub");
+				subSetting.settingEl.classList.add("dd-holiday-sub");
 			});
 		}
 	});
@@ -389,7 +395,7 @@ class HolidaySettingsModal extends Modal {
 		this.plugin = plugin;
 	}
 	onOpen(): void {
-		const { contentEl } = this as any;
+		const { contentEl } = this;
 		contentEl.empty();
 		renderHolidaySettings(this.plugin, contentEl);
 	}
@@ -407,7 +413,7 @@ class DDSettingTab extends PluginSettingTab {
 		const { containerEl } = this;
 		containerEl.empty();
 
-		(containerEl as any).createEl("h3", { text: "Suggestion keys" });
+		containerEl.createEl("h3", { text: "Suggestion keys" });
 
 		new Setting(containerEl)
 			.setName("Accept key")
@@ -417,7 +423,7 @@ class DDSettingTab extends PluginSettingTab {
 					.addOptions({ Tab: "Tab", Enter: "Enter" })
 					.setValue(this.plugin.settings.acceptKey)
 					.onChange(async (v: string) => {
-						this.plugin.settings.acceptKey = v as any;
+						this.plugin.settings.acceptKey = v as "Enter" | "Tab";
 						await this.plugin.saveSettings();
 					}),
 			);
@@ -442,7 +448,7 @@ class DDSettingTab extends PluginSettingTab {
 					 new HolidaySettingsModal(this.app, this.plugin).open();
 				 }));
 
-		(containerEl as any).createEl("h3", { text: "Custom date mappings" });
+		containerEl.createEl("h3", { text: "Custom date mappings" });
 		new Setting(containerEl)
 			.setDesc("Map phrases to fixed dates, e.g. 'Mid Year' → '06-01'")
 			.addExtraButton(b =>
