@@ -17,7 +17,12 @@ declare module "obsidian" {
         openLinkText(path: string, source: string, newLeaf: boolean): void;
     }
 
-    export class App { vault: Vault; workspace: Workspace; internalPlugins: any; }
+    export class App {
+        vault: Vault;
+        workspace: Workspace;
+        internalPlugins: any;
+        metadataCache: any;
+    }
 
     export interface EventRef {
         el: HTMLElement | Document | Window;
@@ -85,6 +90,7 @@ declare module "obsidian" {
 
     export class Setting {
         constructor(el: HTMLElement);
+        settingEl: HTMLElement;
         setName(name: string): this;
         setDesc(desc: string): this;
         addText(cb: (t: any) => any): this;
@@ -104,6 +110,7 @@ declare module "obsidian" {
 }
 
 interface HTMLElement {
+    createEl(tag: string, options?: { text?: string; cls?: string }): HTMLElement;
     createDiv(options: { text: string }): HTMLElement;
     empty(): void;
 }

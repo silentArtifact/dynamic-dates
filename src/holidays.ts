@@ -86,18 +86,24 @@ export function dayDiff(a: MomentLike, b: MomentLike): number {
 	return Math.abs(Math.round((da.getTime() - db.getTime()) / 86400000));
 }
 
-export function closestDate(base: moment.Moment, now: moment.Moment): moment.Moment {
-	const opts = [base.clone(), base.clone().add(1, "year"), base.clone().subtract(1, "year")];
+export function closestOf(opts: moment.Moment[], now: moment.Moment): moment.Moment {
 	let best = opts[0];
 	let bestDiff = dayDiff(best, now);
-	for (const c of opts.slice(1)) {
-		const diff = dayDiff(c, now);
+	for (let i = 1; i < opts.length; i++) {
+		const diff = dayDiff(opts[i], now);
 		if (diff < bestDiff) {
-			best = c;
+			best = opts[i];
 			bestDiff = diff;
 		}
 	}
 	return best;
+}
+
+export function closestDate(base: moment.Moment, now: moment.Moment): moment.Moment {
+	return closestOf(
+		[base.clone(), base.clone().add(1, "year"), base.clone().subtract(1, "year")],
+		now,
+	);
 }
 
 // ── Weekday aliases ──────────────────────────────────────────────
@@ -304,6 +310,15 @@ for (const [canon, def] of Object.entries(HOLIDAY_DEFS)) {
 
 export const HOLIDAY_PHRASES = Object.keys(HOLIDAYS);
 
+/** Pre-compiled regexes for matching "<holiday> [of] <year>" patterns. */
+const HOLIDAY_YEAR_RE: Map<string, RegExp> = new Map();
+for (const name of Object.keys(HOLIDAYS)) {
+	HOLIDAY_YEAR_RE.set(
+		name,
+		new RegExp(`^${name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}(?:\\s+of)?\\s+(\\d{2,4})$`),
+	);
+}
+
 // ── Text formatting ──────────────────────────────────────────────
 
 export const NON_PROPER_WORDS = new Set([
@@ -393,6 +408,12 @@ export function needsYearAlias(phrase: string): boolean {
 	return NEEDS_YEAR_RE3.test(lower);
 }
 
+/** Expand a two-digit year to four digits using the current century. */
+function expandYear(y: number): number {
+	if (y < 100) y += Math.floor(new Date().getFullYear() / 100) * 100;
+	return y;
+}
+
 export function isHolidayQualifier(lower: string): boolean {
 	const m = lower.match(/^(last|next)\s+(.*)$/);
 	if (!m) return false;
@@ -474,20 +495,10 @@ export function phraseToMoment(phrase: string): moment.Moment | null {
 		if (!holidayEnabled(name)) continue;
 		const calc = def.calc;
 		if (lower === name) {
-			const base = calc(now.year());
-			const next = calc(now.year() + 1);
-			const prev = calc(now.year() - 1);
-			const opts = [base, next, prev];
-			let best = opts[0];
-			let bestDiff = dayDiff(best, now);
-			for (const c of opts.slice(1)) {
-				const diff = dayDiff(c, now);
-				if (diff < bestDiff) {
-					best = c;
-					bestDiff = diff;
-				}
-			}
-			return best;
+			return closestOf(
+				[calc(now.year()), calc(now.year() + 1), calc(now.year() - 1)],
+				now,
+			);
 		}
 		if (lower === `last ${name}`) {
 			let m = calc(now.year());
@@ -499,11 +510,10 @@ export function phraseToMoment(phrase: string): moment.Moment | null {
 			if (!m.isAfter(now, "day")) m = calc(now.year() + 1);
 			return m;
 		}
-		const re = new RegExp(`^${name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}(?:\\s+of)?\\s+(\\d{2,4})$`);
-		const matchYear = lower.match(re);
+		const re = HOLIDAY_YEAR_RE.get(name);
+		const matchYear = re ? lower.match(re) : null;
 		if (matchYear) {
-			let y = parseInt(matchYear[1]);
-			if (y < 100) y += 2000;
+			const y = expandYear(parseInt(matchYear[1]));
 			return calc(y);
 		}
 	}
@@ -529,7 +539,7 @@ export function phraseToMoment(phrase: string): moment.Moment | null {
 		const dayNum = parseInt(mdy[2]);
 		let yearNum = parseInt(mdy[3]);
 		if (!isNaN(dayNum) && !isNaN(yearNum)) {
-			if (yearNum < 100) yearNum += 2000;
+			yearNum = expandYear(yearNum);
 			const idx = MONTHS.indexOf(monthName.toLowerCase());
 			const target = moment(new Date(yearNum, idx, dayNum));
 			if (!target.isValid()) return null;
@@ -572,7 +582,7 @@ export function phraseToMoment(phrase: string): moment.Moment | null {
 		const yearText = nthWd[4];
 		const monthIdx = MONTHS.indexOf(monthName.toLowerCase());
 		const map: Record<string, number> = { first:1, second:2, third:3, fourth:4, fifth:5 };
-		const parseYear = (y: string) => (parseInt(y) < 100 ? parseInt(y) + 2000 : parseInt(y));
+		const parseYear = (y: string) => expandYear(parseInt(y));
 		const baseYear = yearText ? parseYear(yearText) : now.year();
 
 		const compute = (y: number) =>
@@ -583,19 +593,10 @@ export function phraseToMoment(phrase: string): moment.Moment | null {
 		let target = compute(baseYear);
 
 		if (!yearText) {
-			const prev = compute(baseYear - 1);
-			const next = compute(baseYear + 1);
-			const opts = [target, next, prev];
-			let best = opts[0];
-			let bestDiff = dayDiff(best, now);
-			for (const o of opts.slice(1)) {
-				const diff = dayDiff(o, now);
-				if (diff < bestDiff) {
-					best = o;
-					bestDiff = diff;
-				}
-			}
-			target = best;
+			target = closestOf(
+				[target, compute(baseYear + 1), compute(baseYear - 1)],
+				now,
+			);
 		}
 
 		return target;
